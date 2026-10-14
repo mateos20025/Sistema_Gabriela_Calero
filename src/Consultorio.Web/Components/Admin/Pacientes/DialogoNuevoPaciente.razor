@@ -1,0 +1,57 @@
+@inject RegistrarPaciente Registrar
+@inject FluentValidation.IValidator<RegistrarPacienteComando> Validador
+@inject OpcionesProteccionDatos ProteccionDatos
+
+<MudDialog>
+    <DialogContent>
+        <MensajesError Errores="errores" />
+
+        <MudForm @ref="formulario" Model="modelo" Validation="@Validador.ParaMudForm()">
+            <CamposPaciente Modelo="modelo" EnfocarCedula="true" />
+
+            <MudPaper Outlined="true" Class="pa-3 mt-4">
+                <MudCheckBox T="bool" @bind-Value="modelo.ConsentimientoAceptado" For="() => modelo.ConsentimientoAceptado"
+                             Color="Color.Primary" Label="@TextoConsentimiento" />
+            </MudPaper>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => Dialogo.Cancel()">Cancelar</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="GuardarAsync" Disabled="guardando">Registrar paciente</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance Dialogo { get; set; } = default!;
+
+    private MudForm formulario = default!;
+    private readonly RegistrarPacienteComando modelo = new();
+    private IReadOnlyList<string> errores = [];
+    private bool guardando;
+
+    private string TextoConsentimiento =>
+        "El paciente autorizó el tratamiento de sus datos personales para la gestión de sus citas, " +
+        $"conforme a la política de privacidad vigente (versión {ProteccionDatos.VersionPoliticaPrivacidad}).";
+
+    private async Task GuardarAsync()
+    {
+        await formulario.ValidateAsync();
+        if (!formulario.IsValid)
+        {
+            return;
+        }
+
+        guardando = true;
+        var resultado = await Registrar.EjecutarAsync(modelo, CancellationToken.None);
+        guardando = false;
+
+        if (!resultado.Exito)
+        {
+            errores = resultado.Errores;
+            return;
+        }
+
+        Dialogo.Close(DialogResult.Ok(resultado.Valor));
+    }
+}

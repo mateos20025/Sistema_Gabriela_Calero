@@ -22,6 +22,144 @@ namespace Consultorio.Infrastructure.Persistencia.Migraciones
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Consultorio.Domain.Pacientes.Paciente", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("ActualizadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("actualizado_en");
+
+                    b.Property<string>("Apellidos")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("apellidos");
+
+                    b.Property<string>("Cedula")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("cedula");
+
+                    b.Property<DateTime>("ConsentimientoAceptadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("consentimiento_aceptado_en");
+
+                    b.Property<string>("ConsentimientoOrigen")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("consentimiento_origen");
+
+                    b.Property<string>("ConsentimientoVersion")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("consentimiento_version");
+
+                    b.Property<string>("CorreoElectronico")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("correo_electronico");
+
+                    b.Property<DateTime>("CreadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("creado_en");
+
+                    b.Property<DateTime?>("DeshabilitadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deshabilitado_en");
+
+                    b.Property<string>("Nombres")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("nombres");
+
+                    b.Property<string>("Telefono")
+                        .IsRequired()
+                        .HasMaxLength(13)
+                        .HasColumnType("character varying(13)")
+                        .HasColumnName("telefono");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_pacientes");
+
+                    b.HasIndex("Cedula")
+                        .IsUnique()
+                        .HasDatabaseName("ix_pacientes_cedula");
+
+                    b.HasIndex("Apellidos", "Nombres")
+                        .HasDatabaseName("ix_pacientes_apellidos_nombres");
+
+                    b.ToTable("pacientes", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_pacientes_cedula", "cedula ~ '^[0-9]{10}$'");
+
+                            t.HasCheckConstraint("ck_pacientes_telefono", "telefono ~ '^\\+593[2-9][0-9]{7,8}$'");
+                        });
+                });
+
+            modelBuilder.Entity("Consultorio.Infrastructure.Auditoria.RegistroAuditoria", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Accion")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("accion");
+
+                    b.Property<DateTime>("ActualizadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("actualizado_en");
+
+                    b.PrimitiveCollection<string[]>("Campos")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("campos");
+
+                    b.Property<DateTime>("CreadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("creado_en");
+
+                    b.Property<string>("Entidad")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("entidad");
+
+                    b.Property<Guid>("EntidadId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("entidad_id");
+
+                    b.Property<Guid?>("UsuarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_auditoria");
+
+                    b.HasIndex("UsuarioId")
+                        .HasDatabaseName("ix_auditoria_usuario_id");
+
+                    b.HasIndex("Entidad", "EntidadId", "CreadoEn")
+                        .HasDatabaseName("ix_auditoria_entidad_entidad_id_creado_en");
+
+                    b.ToTable("auditoria", (string)null);
+                });
+
             modelBuilder.Entity("Consultorio.Infrastructure.Identidad.Usuario", b =>
                 {
                     b.Property<Guid>("Id")
@@ -337,6 +475,15 @@ namespace Consultorio.Infrastructure.Persistencia.Migraciones
                         .HasName("pk_usuario_tokens");
 
                     b.ToTable("usuario_tokens", (string)null);
+                });
+
+            modelBuilder.Entity("Consultorio.Infrastructure.Auditoria.RegistroAuditoria", b =>
+                {
+                    b.HasOne("Consultorio.Infrastructure.Identidad.Usuario", null)
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_auditoria_usuarios_usuario_id");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>

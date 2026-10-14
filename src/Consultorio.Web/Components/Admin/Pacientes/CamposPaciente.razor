@@ -1,0 +1,31 @@
+@* Campos comunes de los formularios de paciente (nuevo y editar). Deben ir dentro de un MudForm. *@
+
+<MudTextField T="string" @bind-Value="Modelo.Cedula" For="() => Modelo.Cedula" Label="Cédula"
+              Variant="Variant.Outlined" MaxLength="12" AutoFocus="EnfocarCedula" Class="mb-3" />
+
+<MudGrid Spacing="2" Class="mb-3">
+    <MudItem xs="12" sm="6">
+        <MudTextField T="string" @bind-Value="Modelo.Nombres" For="() => Modelo.Nombres" Label="Nombres"
+                      Variant="Variant.Outlined" MaxLength="@NombrePersona.LongitudMaxima" />
+    </MudItem>
+    <MudItem xs="12" sm="6">
+        <MudTextField T="string" @bind-Value="Modelo.Apellidos" For="() => Modelo.Apellidos" Label="Apellidos"
+                      Variant="Variant.Outlined" MaxLength="@NombrePersona.LongitudMaxima" />
+    </MudItem>
+</MudGrid>
+
+<MudTextField T="string" @bind-Value="Modelo.Telefono" For="() => Modelo.Telefono" Label="Teléfono"
+              InputType="InputType.Telephone" Variant="Variant.Outlined" MaxLength="20"
+              HelperText="Celular 09XXXXXXXX o fijo con código de provincia 02XXXXXXX" Class="mb-3" />
+
+<MudTextField T="string" @bind-Value="Modelo.CorreoElectronico" For="() => Modelo.CorreoElectronico"
+              Label="Correo electrónico (opcional)" InputType="InputType.Email" Variant="Variant.Outlined"
+              MaxLength="@DireccionCorreo.LongitudMaxima" />
+
+@code {
+    [Parameter, EditorRequired]
+    public DatosPacienteComando Modelo { get; set; } = default!;
+
+    [Parameter]
+    public bool EnfocarCedula { get; set; }
+}

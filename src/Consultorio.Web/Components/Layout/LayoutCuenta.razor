@@ -1,5 +1,6 @@
 @inherits LayoutComponentBase
 @inject NavigationManager Navegacion
+@inject IOptions<OpcionesConsultorio> Consultorio
 
 <MudThemeProvider Theme="TemaConsultorio.Tema" />
 
@@ -13,7 +14,7 @@ else
         <div class="cuenta-contenedor">
             <a href="/" class="cuenta-marca">
                 <MudIcon Icon="@Icons.Material.Filled.LocalHospital" Color="Color.Primary" />
-                <span>Consultorio <strong>Dra. Gabriela Calero</strong></span>
+                <strong>@Consultorio.Value.Nombre</strong>
             </a>
             <MudPaper Elevation="2" Class="pa-6 pa-sm-8">
                 @Body

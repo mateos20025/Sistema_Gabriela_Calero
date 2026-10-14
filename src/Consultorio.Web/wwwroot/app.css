@@ -126,7 +126,29 @@ h1:focus {
     cursor: pointer;
     position: absolute;
     right: 0.75rem;
-    top: 0.5rem;
+    top: 0.35rem;
+    border: none;
+    background: none;
+    font-size: 1.4rem;
+    line-height: 1;
+    color: inherit;
+}
+
+/* ---------- Pacientes ---------- */
+
+.dato-etiqueta {
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.8rem;
+}
+
+.dato-valor {
+    font-size: 1rem;
+    margin-bottom: 16px;
+    word-break: break-word;
+}
+
+.fila-clicable {
+    cursor: pointer;
 }
 
 .blazor-error-boundary {

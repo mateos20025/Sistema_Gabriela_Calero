@@ -1,4 +1,5 @@
 @inherits LayoutComponentBase
+@inject IOptions<OpcionesConsultorio> Consultorio
 
 <MudThemeProvider Theme="TemaConsultorio.Tema" />
 <MudPopoverProvider />
@@ -8,7 +9,7 @@
 <MudLayout>
     <MudAppBar Elevation="0">
         <MudIcon Icon="@Icons.Material.Filled.LocalHospital" Class="mr-2" />
-        <MudText Typo="Typo.h6">Consultorio Dra. Gabriela Calero</MudText>
+        <MudText Typo="Typo.h6">@Consultorio.Value.Nombre</MudText>
         <MudSpacer />
         <MudButton Href="@RutasCuenta.Panel" Variant="Variant.Text" Color="Color.Inherit"
                    StartIcon="@Icons.Material.Filled.Lock">Personal</MudButton>
@@ -23,5 +24,5 @@
 <div id="blazor-error-ui" data-nosnippet>
     Ocurrió un error inesperado.
     <a href="." class="reload">Recargar</a>
-    <span class="dismiss">🗙</span>
+    <button type="button" class="dismiss" aria-label="Cerrar aviso">&times;</button>
 </div>

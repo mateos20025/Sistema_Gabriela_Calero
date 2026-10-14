@@ -1,0 +1,16 @@
+@* Lista de errores devueltos por un caso de uso. No muestra nada si no hay errores. *@
+
+@if (Errores.Count > 0)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4" role="alert">
+        @foreach (var error in Errores)
+        {
+            <div>@error</div>
+        }
+    </MudAlert>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<string> Errores { get; set; } = [];
+}

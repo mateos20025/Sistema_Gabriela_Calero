@@ -1,3 +1,5 @@
+using Consultorio.Domain.Pacientes;
+using Consultorio.Infrastructure.Auditoria;
 using Consultorio.Infrastructure.Identidad;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -6,12 +8,22 @@ using Microsoft.EntityFrameworkCore;
 namespace Consultorio.Infrastructure.Persistencia;
 
 /// <summary>
-/// Única base de datos del sistema. Incluye las tablas de Identity (usuarios, roles...) y,
-/// en los próximos módulos, pacientes, citas y pagos.
+/// Única base de datos del sistema: tablas de Identity (usuarios, roles...), pacientes, auditoría y,
+/// en los próximos módulos, citas y pagos.
 /// </summary>
 public sealed class ConsultorioDbContext(DbContextOptions<ConsultorioDbContext> options)
     : IdentityDbContext<Usuario, IdentityRole<Guid>, Guid>(options)
 {
+    public DbSet<Paciente> Pacientes => Set<Paciente>();
+
+    public DbSet<RegistroAuditoria> Auditoria => Set<RegistroAuditoria>();
+
+    /// <summary>
+    /// Usuario responsable de los cambios que se guarden con este contexto (para la auditoría).
+    /// Lo asigna <see cref="FabricaContextos"/>; si queda vacío, el cambio se atribuye al sistema.
+    /// </summary>
+    public Guid? UsuarioAuditoriaId { get; set; }
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);

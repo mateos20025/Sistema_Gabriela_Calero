@@ -1,7 +1,7 @@
 @page "/admin"
 @inject IRelojSistema Reloj
 
-<PageTitle>Panel · Consultorio</PageTitle>
+<Titulo Texto="Panel" />
 
 <AuthorizeView Context="sesion">
     <MudText Typo="Typo.h4" HtmlTag="h1" Class="mb-1">Hola, @Nombre(sesion.User)</MudText>
@@ -10,7 +10,7 @@
     </MudText>
 
     <MudGrid>
-        @foreach (var modulo in modulos)
+        @foreach (var modulo in modulos.Where(m => !m.SoloDoctora || sesion.User.IsInRole(Roles.Doctora)))
         {
             <MudItem xs="12" sm="6" md="4">
                 <MudCard Outlined="true" Class="modulo">
@@ -22,25 +22,14 @@
                         <MudText Typo="Typo.body2">@modulo.Descripcion</MudText>
                     </MudCardContent>
                     <MudCardActions>
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">Próximamente</MudChip>
-                    </MudCardActions>
-                </MudCard>
-            </MudItem>
-        }
-
-        @if (sesion.User.IsInRole(Roles.Doctora))
-        {
-            <MudItem xs="12" sm="6" md="4">
-                <MudCard Outlined="true" Class="modulo">
-                    <MudCardContent>
-                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-2">
-                            <MudIcon Icon="@Icons.Material.Filled.People" Color="Color.Primary" />
-                            <MudText Typo="Typo.h6">Usuarios</MudText>
-                        </MudStack>
-                        <MudText Typo="Typo.body2">Cuentas del personal: crear, desactivar y restablecer contraseñas.</MudText>
-                    </MudCardContent>
-                    <MudCardActions>
-                        <MudButton Href="/admin/usuarios" Variant="Variant.Text" Color="Color.Primary">Gestionar</MudButton>
+                        @if (modulo.Ruta is null)
+                        {
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">Próximamente</MudChip>
+                        }
+                        else
+                        {
+                            <MudButton Href="@modulo.Ruta" Variant="Variant.Text" Color="Color.Primary">Abrir</MudButton>
+                        }
                     </MudCardActions>
                 </MudCard>
             </MudItem>
@@ -49,13 +38,15 @@
 </AuthorizeView>
 
 @code {
-    private sealed record Modulo(string Titulo, string Descripcion, string Icono);
+    /// <summary>Tarjeta del panel. Sin <see cref="Ruta"/> se muestra como "Próximamente".</summary>
+    private sealed record Modulo(string Titulo, string Descripcion, string Icono, string? Ruta, bool SoloDoctora = false);
 
     private static readonly Modulo[] modulos =
     [
-        new("Citas", "Cola de solicitudes, confirmaciones y agenda diaria y semanal.", Icons.Material.Filled.Event),
-        new("Pacientes", "Registro e identificación de pacientes por cédula.", Icons.Material.Filled.Badge),
-        new("Pagos", "Validación de transferencias y pagos en efectivo.", Icons.Material.Filled.Payments),
+        new("Pacientes", "Registro, búsqueda y datos de contacto de los pacientes.", Icons.Material.Filled.Badge, RutasPanel.Pacientes),
+        new("Citas", "Cola de solicitudes, confirmaciones y agenda diaria y semanal.", Icons.Material.Filled.Event, null),
+        new("Pagos", "Validación de transferencias y pagos en efectivo.", Icons.Material.Filled.Payments, null),
+        new("Usuarios", "Cuentas del personal: crear, desactivar y restablecer contraseñas.", Icons.Material.Filled.People, RutasPanel.Usuarios, SoloDoctora: true),
     ];
 
     private string Hoy => Reloj.AhoraEcuador.ToString("dddd d 'de' MMMM 'de' yyyy");

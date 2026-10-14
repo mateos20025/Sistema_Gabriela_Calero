@@ -1,0 +1,254 @@
+@page "/admin/pacientes/{Id:guid}"
+@inject ObtenerPaciente Obtener
+@inject DeshabilitarPaciente Deshabilitar
+@inject HabilitarPaciente Habilitar
+@inject IDialogService Dialogos
+@inject ISnackbar Snackbar
+
+@* Título genérico a propósito: el nombre del paciente no debe quedar en el historial del navegador. *@
+<Titulo Texto="Ficha del paciente" />
+
+<MudButton Href="@RutasPanel.Pacientes" Variant="Variant.Text" StartIcon="@Icons.Material.Filled.ArrowBack" Class="mb-2">
+    Pacientes
+</MudButton>
+
+@if (cargando)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+}
+else if (paciente is null)
+{
+    <MudAlert Severity="Severity.Warning">El paciente no existe.</MudAlert>
+}
+else
+{
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Class="mb-4">
+        <div>
+            <MudText Typo="Typo.h4" HtmlTag="h1">@paciente.NombreCompleto</MudText>
+            <MudText Typo="Typo.body2" Class="mud-text-secondary">Registrado el @Formato.FechaHora(paciente.CreadoUtc)</MudText>
+        </div>
+        <MudStack Row="true" Spacing="2">
+            @if (paciente.Deshabilitado)
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ToggleOn"
+                           OnClick="HabilitarAsync" Disabled="ocupado">Habilitar</MudButton>
+            }
+            else
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Edit"
+                           OnClick="EditarAsync" Disabled="ocupado">Editar</MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Warning" StartIcon="@Icons.Material.Filled.ToggleOff"
+                           OnClick="DeshabilitarAsync" Disabled="ocupado">Deshabilitar</MudButton>
+            }
+        </MudStack>
+    </MudStack>
+
+    @if (paciente.Deshabilitado)
+    {
+        <MudAlert Severity="Severity.Warning" Class="mb-4">
+            Este paciente está deshabilitado desde el @Formato.FechaHora(paciente.DeshabilitadoUtc!.Value).
+            No aparece en las búsquedas y sus datos se conservan. Habilítalo para volver a atenderlo o modificar sus datos.
+        </MudAlert>
+    }
+
+    <MudGrid>
+        <MudItem xs="12" md="7">
+            <MudCard Outlined="true">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Datos del paciente</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudGrid Spacing="2">
+                        <MudItem xs="12" sm="6">
+                            <div class="dato-etiqueta">Cédula</div>
+                            <div class="dato-valor">@paciente.Cedula</div>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <div class="dato-etiqueta">Teléfono</div>
+                            <div class="dato-valor">
+                                <MudLink Href="@($"tel:{paciente.Telefono}")">@Formato.Telefono(paciente.Telefono)</MudLink>
+                            </div>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <div class="dato-etiqueta">Nombres</div>
+                            <div class="dato-valor">@paciente.Nombres</div>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <div class="dato-etiqueta">Apellidos</div>
+                            <div class="dato-valor">@paciente.Apellidos</div>
+                        </MudItem>
+                        <MudItem xs="12">
+                            <div class="dato-etiqueta">Correo electrónico</div>
+                            <div class="dato-valor">
+                                @if (paciente.CorreoElectronico is null)
+                                {
+                                    <span class="mud-text-secondary">No registrado</span>
+                                }
+                                else
+                                {
+                                    <MudLink Href="@($"mailto:{paciente.CorreoElectronico}")">@paciente.CorreoElectronico</MudLink>
+                                }
+                            </div>
+                        </MudItem>
+                    </MudGrid>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <MudItem xs="12" md="5">
+            <MudCard Outlined="true">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Protección de datos</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <div class="dato-etiqueta">Consentimiento de tratamiento de datos</div>
+                    <div class="dato-valor">Aceptado el @Formato.FechaHora(paciente.ConsentimientoAceptadoUtc)</div>
+                    <div class="dato-etiqueta">Versión de la política de privacidad</div>
+                    <div class="dato-valor">@paciente.ConsentimientoVersion</div>
+                    <div class="dato-etiqueta">Canal</div>
+                    <div class="dato-valor">@NombreOrigen(paciente.ConsentimientoOrigen)</div>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <AuthorizeView Roles="@Roles.Doctora">
+            <MudItem xs="12">
+                <MudCard Outlined="true">
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6">Historial de cambios</MudText>
+                            <MudText Typo="Typo.body2" Class="mud-text-secondary">Quién modificó los datos y cuándo.</MudText>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        @if (paciente.Historial.Count == 0)
+                        {
+                            <MudText Class="mud-text-secondary">Sin registros.</MudText>
+                        }
+                        else
+                        {
+                            <MudSimpleTable Dense="true" Hover="true" Elevation="0">
+                                <thead>
+                                    <tr>
+                                        <th>Fecha</th>
+                                        <th>Usuario</th>
+                                        <th>Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var evento in paciente.Historial)
+                                    {
+                                        <tr>
+                                            <td>@Formato.FechaHora(evento.FechaUtc)</td>
+                                            <td>@evento.Usuario</td>
+                                            <td>@DescribirEvento(evento)</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </MudSimpleTable>
+                        }
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        </AuthorizeView>
+    </MudGrid>
+}
+
+@code {
+    private static readonly Dictionary<string, string> NombresCampos = new()
+    {
+        [nameof(Paciente.Cedula)] = "cédula",
+        [nameof(Paciente.Nombres)] = "nombres",
+        [nameof(Paciente.Apellidos)] = "apellidos",
+        [nameof(Paciente.Telefono)] = "teléfono",
+        [nameof(Paciente.CorreoElectronico)] = "correo electrónico",
+    };
+
+    private static readonly DialogOptions OpcionesDialogo = new()
+    {
+        MaxWidth = MaxWidth.Small,
+        FullWidth = true,
+        CloseOnEscapeKey = true,
+        BackdropClick = false,
+    };
+
+    [Parameter]
+    public Guid Id { get; set; }
+
+    private PacienteDetalle? paciente;
+    private bool cargando = true;
+    private bool ocupado;
+
+    protected override Task OnParametersSetAsync() => CargarAsync();
+
+    private async Task CargarAsync()
+    {
+        cargando = true;
+        paciente = await Obtener.EjecutarAsync(Id, CancellationToken.None);
+        cargando = false;
+    }
+
+    private async Task EditarAsync()
+    {
+        var parametros = new DialogParameters<DialogoEditarPaciente> { { d => d.Paciente, paciente! } };
+        var dialogo = await Dialogos.ShowAsync<DialogoEditarPaciente>("Editar paciente", parametros, OpcionesDialogo);
+        var resultado = await dialogo.Result;
+
+        if (resultado is { Canceled: false })
+        {
+            Snackbar.Add("Datos del paciente actualizados.", Severity.Success);
+            await CargarAsync();
+        }
+    }
+
+    private async Task DeshabilitarAsync()
+    {
+        var confirmado = await Dialogos.ShowMessageBoxAsync(
+            "Deshabilitar paciente",
+            $"{paciente!.NombreCompleto} dejará de aparecer en las búsquedas. Sus datos se conservan, la acción queda " +
+            "registrada y podrás volver a habilitarlo cuando quieras. ¿Continuar?",
+            yesText: "Deshabilitar",
+            cancelText: "Cancelar");
+
+        if (confirmado == true)
+        {
+            await EjecutarAsync(Deshabilitar.EjecutarAsync(Id, CancellationToken.None), "Paciente deshabilitado.");
+        }
+    }
+
+    private Task HabilitarAsync() =>
+        EjecutarAsync(Habilitar.EjecutarAsync(Id, CancellationToken.None), "Paciente habilitado.");
+
+    private async Task EjecutarAsync(Task<Resultado> accion, string mensajeExito)
+    {
+        ocupado = true;
+        var resultado = await accion;
+        ocupado = false;
+
+        Snackbar.Add(
+            resultado.Exito ? mensajeExito : string.Join(" ", resultado.Errores),
+            resultado.Exito ? Severity.Success : Severity.Error);
+
+        await CargarAsync();
+    }
+
+    private static string DescribirEvento(EventoAuditoria evento) => evento.Accion switch
+    {
+        AccionAuditoria.Creado => "Registró al paciente",
+        AccionAuditoria.Deshabilitado => "Deshabilitó al paciente",
+        AccionAuditoria.Habilitado => "Habilitó al paciente",
+        _ => "Modificó: " + string.Join(", ", evento.Campos.Select(c => NombresCampos.GetValueOrDefault(c, c))),
+    };
+
+    private static string NombreOrigen(OrigenRegistro origen) => origen switch
+    {
+        OrigenRegistro.Panel => "Registrado por el personal",
+        OrigenRegistro.Web => "Página web",
+        OrigenRegistro.WhatsApp => "WhatsApp",
+        _ => origen.ToString(),
+    };
+}

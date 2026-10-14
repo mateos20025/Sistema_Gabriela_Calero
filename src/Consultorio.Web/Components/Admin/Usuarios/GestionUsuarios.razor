@@ -5,7 +5,7 @@
 @inject IDialogService Dialogos
 @inject ISnackbar Snackbar
 
-<PageTitle>Usuarios · Consultorio</PageTitle>
+<Titulo Texto="Usuarios" />
 
 <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Class="mb-4">
     <div>
@@ -54,7 +54,7 @@
                 <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">Contraseña temporal</MudChip>
             }
         </MudTd>
-        <MudTd DataLabel="Último acceso">@Formatear(context.UltimoAccesoUtc)</MudTd>
+        <MudTd DataLabel="Último acceso">@Formato.FechaHora(context.UltimoAccesoUtc, "Nunca")</MudTd>
         <MudTd>
             @* La doctora no puede modificarse a sí misma: así siempre queda al menos una doctora activa. *@
             @if (context.Id != miId)
@@ -209,7 +209,4 @@
         var dialogo = await Dialogos.ShowAsync<DialogoCredencialTemporal>(titulo, parametros, opciones);
         await dialogo.Result;
     }
-
-    private static string Formatear(DateTime? fechaUtc) =>
-        fechaUtc is null ? "Nunca" : HoraEcuador.DesdeUtc(fechaUtc.Value).ToString("dd/MM/yyyy HH:mm");
 }

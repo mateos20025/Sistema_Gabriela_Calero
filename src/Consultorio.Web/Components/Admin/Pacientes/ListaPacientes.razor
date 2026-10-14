@@ -1,0 +1,120 @@
+@page "/admin/pacientes"
+@inject BuscarPacientes Buscar
+@inject IDialogService Dialogos
+@inject ISnackbar Snackbar
+@inject NavigationManager Navegacion
+
+<Titulo Texto="Pacientes" />
+
+<MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Class="mb-4">
+    <div>
+        <MudText Typo="Typo.h4" HtmlTag="h1">Pacientes</MudText>
+        <MudText Typo="Typo.body2" Class="mud-text-secondary">Busca por nombre, apellido, cédula o teléfono.</MudText>
+    </div>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.PersonAdd"
+               OnClick="NuevoAsync">Nuevo paciente</MudButton>
+</MudStack>
+
+<MudPaper Elevation="1" Class="pa-4 mb-4">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Spacing="4">
+        <MudTextField T="string" @bind-Value="texto" Placeholder="Buscar paciente" Variant="Variant.Outlined"
+                      Margin="Margin.Dense" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                      DebounceInterval="400" OnDebounceIntervalElapsed="AlBuscarAsync"
+                      MaxLength="@FiltroPacientes.LongitudMaximaTexto" Class="flex-grow-1"
+                      aria-label="Buscar paciente" />
+        <MudSwitch T="bool" Value="mostrarDeshabilitados" ValueChanged="CambiarMostrarDeshabilitadosAsync"
+                   Color="Color.Primary" Label="Mostrar deshabilitados" />
+    </MudStack>
+</MudPaper>
+
+<MudTable @ref="tabla" T="PacienteResumen" ServerData="CargarAsync" RowsPerPage="20" Hover="true"
+          Breakpoint="Breakpoint.Sm" Elevation="1" LoadingProgressColor="Color.Primary"
+          OnRowClick="AbrirPaciente" RowClass="fila-clicable">
+    <HeaderContent>
+        <MudTh>Paciente</MudTh>
+        <MudTh>Cédula</MudTh>
+        <MudTh>Teléfono</MudTh>
+        <MudTh>Correo</MudTh>
+        <MudTh>Registrado</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Paciente">
+            <MudLink Href="@RutasPanel.Paciente(context.Id)">@context.Apellidos @context.Nombres</MudLink>
+            @if (context.Deshabilitado)
+            {
+                <MudChip T="string" Size="Size.Small" Class="ml-2">Deshabilitado</MudChip>
+            }
+        </MudTd>
+        <MudTd DataLabel="Cédula">@context.Cedula</MudTd>
+        <MudTd DataLabel="Teléfono">@Formato.Telefono(context.Telefono)</MudTd>
+        <MudTd DataLabel="Correo">@(context.CorreoElectronico ?? "-")</MudTd>
+        <MudTd DataLabel="Registrado">@Formato.Fecha(context.CreadoUtc)</MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText>@(string.IsNullOrWhiteSpace(texto) ? "Todavía no hay pacientes registrados." : "No se encontraron pacientes con esa búsqueda.")</MudText>
+    </NoRecordsContent>
+    <LoadingContent>
+        <MudText>Cargando pacientes...</MudText>
+    </LoadingContent>
+    <PagerContent>
+        <MudTablePager RowsPerPageString="Filas por página:" InfoFormat="{first_item}-{last_item} de {all_items}"
+                       PageSizeOptions="opcionesTamanoPagina" />
+    </PagerContent>
+</MudTable>
+
+@code {
+    private static readonly int[] opcionesTamanoPagina = [10, 20, 50];
+
+    private static readonly DialogOptions OpcionesDialogo = new()
+    {
+        MaxWidth = MaxWidth.Small,
+        FullWidth = true,
+        CloseOnEscapeKey = true,
+        BackdropClick = false,
+    };
+
+    private MudTable<PacienteResumen> tabla = default!;
+    private string? texto;
+    private bool mostrarDeshabilitados;
+
+    private async Task<TableData<PacienteResumen>> CargarAsync(TableState estado, CancellationToken cancellationToken)
+    {
+        var pagina = await Buscar.EjecutarAsync(
+            new FiltroPacientes(texto, mostrarDeshabilitados, estado.Page, estado.PageSize),
+            cancellationToken);
+
+        return new TableData<PacienteResumen> { Items = pagina.Elementos, TotalItems = pagina.Total };
+    }
+
+    private Task AlBuscarAsync(string valor)
+    {
+        texto = valor;
+        return tabla.ReloadServerData();
+    }
+
+    private Task CambiarMostrarDeshabilitadosAsync(bool valor)
+    {
+        mostrarDeshabilitados = valor;
+        return tabla.ReloadServerData();
+    }
+
+    private void AbrirPaciente(TableRowClickEventArgs<PacienteResumen> argumentos)
+    {
+        if (argumentos.Item is not null)
+        {
+            Navegacion.NavigateTo(RutasPanel.Paciente(argumentos.Item.Id));
+        }
+    }
+
+    private async Task NuevoAsync()
+    {
+        var dialogo = await Dialogos.ShowAsync<DialogoNuevoPaciente>("Nuevo paciente", OpcionesDialogo);
+        var resultado = await dialogo.Result;
+
+        if (resultado is { Canceled: false, Data: Guid id })
+        {
+            Snackbar.Add("Paciente registrado.", Severity.Success);
+            Navegacion.NavigateTo(RutasPanel.Paciente(id));
+        }
+    }
+}

@@ -1,0 +1,57 @@
+@inject ActualizarPaciente Actualizar
+@inject FluentValidation.IValidator<ActualizarPacienteComando> Validador
+
+<MudDialog>
+    <DialogContent>
+        <MensajesError Errores="errores" />
+
+        <MudForm @ref="formulario" Model="modelo" Validation="@Validador.ParaMudForm()">
+            <CamposPaciente Modelo="modelo" />
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => Dialogo.Cancel()">Cancelar</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="GuardarAsync" Disabled="guardando">Guardar cambios</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance Dialogo { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public PacienteDetalle Paciente { get; set; } = default!;
+
+    private MudForm formulario = default!;
+    private ActualizarPacienteComando modelo = new();
+    private IReadOnlyList<string> errores = [];
+    private bool guardando;
+
+    protected override void OnInitialized()
+    {
+        modelo = ActualizarPacienteComando.DesdeDetalle(Paciente);
+        // Se muestra en formato nacional (099 123 4567), que es como lo escribe el personal.
+        modelo.Telefono = Formato.Telefono(Paciente.Telefono);
+    }
+
+    private async Task GuardarAsync()
+    {
+        await formulario.ValidateAsync();
+        if (!formulario.IsValid)
+        {
+            return;
+        }
+
+        guardando = true;
+        var resultado = await Actualizar.EjecutarAsync(modelo, CancellationToken.None);
+        guardando = false;
+
+        if (!resultado.Exito)
+        {
+            errores = resultado.Errores;
+            return;
+        }
+
+        Dialogo.Close(DialogResult.Ok(true));
+    }
+}

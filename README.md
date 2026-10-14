@@ -2,57 +2,327 @@
 
 Sistema web de citas para un consultorio médico en Ecuador. Blazor Web App (.NET 10, interactividad Server) + MudBlazor + PostgreSQL 17, con arquitectura limpia en un monolito modular.
 
+## Contenido
+
+1. [Qué hace hoy el sistema](#qué-hace-hoy-el-sistema)
+2. [Requisitos](#requisitos)
+3. [Instalación en una computadora nueva (una sola vez)](#instalación-en-una-computadora-nueva-una-sola-vez)
+4. [Uso diario](#uso-diario)
+5. [Primeros pasos dentro del sistema](#primeros-pasos-dentro-del-sistema)
+6. [Pruebas automáticas](#pruebas-automáticas)
+7. [Comandos frecuentes](#comandos-frecuentes)
+8. [Problemas frecuentes](#problemas-frecuentes)
+9. [Configuración](#configuración)
+10. [Estructura del proyecto](#estructura-del-proyecto)
+
+Todos los comandos se escriben en **Developer PowerShell** (o en el Símbolo del sistema), **uno por uno**, dentro de la carpeta del proyecto.
+
+---
+
+## Qué hace hoy el sistema
+
+| Módulo | Estado | Qué incluye |
+|---|---|---|
+| Login y usuarios | Listo | Inicio de sesión, roles Doctora y Asistente, contraseña temporal obligatoria de cambiar, bloqueo tras 5 intentos fallidos, gestión de usuarios (solo la doctora). |
+| Pacientes | Listo | Registro por cédula ecuatoriana con consentimiento de datos, búsqueda, edición, deshabilitar y habilitar, historial de cambios (solo la doctora). |
+| Citas, Pagos, WhatsApp, Historia clínica | Pendiente | Aparecen como "Próximamente" en el panel. |
+
+Direcciones (con la app corriendo):
+
+| Página | Dirección |
+|---|---|
+| Página pública | https://localhost:7111/ |
+| Panel del personal | https://localhost:7111/admin |
+| Pacientes | https://localhost:7111/admin/pacientes |
+| Usuarios (solo doctora) | https://localhost:7111/admin/usuarios |
+
+---
+
 ## Requisitos
 
-- SDK de .NET 10
-- Docker Desktop
-- Certificado HTTPS de desarrollo de confianza: `dotnet dev-certs https --trust`
+Instala estos programas una sola vez y comprueba que responden.
 
-## Puesta en marcha (desarrollo)
+**SDK de .NET 10**: descárgalo desde https://dotnet.microsoft.com/download/dotnet/10.0
 
-1. Crea el archivo `.env` a partir de `.env.example` y pon una contraseña para PostgreSQL.
-2. Levanta la base de datos:
+```powershell
+dotnet --version
+```
+
+Deberías ver un número que empieza con `10.`
+
+**Docker Desktop**: descárgalo desde https://www.docker.com/products/docker-desktop/ y ábrelo.
+
+```powershell
+docker --version
+```
+
+Deberías ver algo como `Docker version 29.x`.
+
+**Git**:
+
+```powershell
+git --version
+```
+
+---
+
+## Instalación en una computadora nueva (una sola vez)
+
+### Paso 1. Descargar el proyecto
+
+```powershell
+git clone https://github.com/mateos20025/Sistema_Gabriela_Calero.git
+```
+
+```powershell
+cd Sistema_Gabriela_Calero
+```
+
+### Paso 2. Instalar las herramientas del proyecto
+
+Instala `dotnet-ef` (la herramienta de migraciones) en la versión exacta que usa el proyecto.
+
+```powershell
+dotnet tool restore
+```
+
+Deberías ver: `Restauración realizada correctamente.`
+
+### Paso 3. Crear el archivo `.env`
+
+El archivo `.env` guarda la contraseña de la base de datos. **Nunca se sube a GitHub** (ya está en `.gitignore`).
+
+```powershell
+copy .env.example .env
+```
+
+```powershell
+notepad .env
+```
+
+En el Bloc de notas cambia `POSTGRES_PASSWORD` por una contraseña larga y aleatoria (por ejemplo, 30 letras y números) y guarda. Anótala: la necesitas en el paso 5.
+
+### Paso 4. Encender la base de datos
+
+Abre **Docker Desktop** y espera a que diga que está corriendo. Luego:
+
+```powershell
+docker compose up -d
+```
+
+Deberías ver: `Container consultorio-db Started`. Para comprobar que está lista:
+
+```powershell
+docker compose ps
+```
+
+En la columna `STATUS` debe decir `Up ... (healthy)`.
+
+### Paso 5. Configurar los secretos de la aplicación
+
+Los secretos se guardan en tu usuario de Windows (User Secrets), fuera del proyecto. Cambia `LA_CONTRASEÑA_DEL_ENV` por la contraseña del paso 3.
+
+```powershell
+dotnet user-secrets set "ConnectionStrings:Default" "Host=localhost;Port=5432;Database=consultorio;Username=consultorio;Password=LA_CONTRASEÑA_DEL_ENV" --project src/Consultorio.Web
+```
+
+Datos de la primera cuenta de la doctora. La contraseña debe tener **al menos 10 caracteres, una mayúscula, una minúscula y un número**. Es temporal: el sistema obligará a cambiarla en el primer ingreso.
+
+```powershell
+dotnet user-secrets set "UsuarioInicial:NombreCompleto" "Gabriela Calero" --project src/Consultorio.Web
+```
+
+```powershell
+dotnet user-secrets set "UsuarioInicial:Email" "correo-de-la-doctora@ejemplo.com" --project src/Consultorio.Web
+```
+
+```powershell
+dotnet user-secrets set "UsuarioInicial:Password" "ClaveTemporal2026" --project src/Consultorio.Web
+```
+
+Para revisar lo que quedó guardado:
+
+```powershell
+dotnet user-secrets list --project src/Consultorio.Web
+```
+
+### Paso 6. Confiar en el certificado HTTPS de desarrollo
+
+```powershell
+dotnet dev-certs https --trust
+```
+
+Si aparece una ventana de Windows preguntando si confías en el certificado, responde **Sí**. Deberías ver `Successfully trusted`.
+
+### Paso 7. Ejecutar la aplicación
+
+```powershell
+dotnet run --project src/Consultorio.Web
+```
+
+La primera vez tarda un poco porque compila. Al arrancar, la aplicación crea las tablas, los roles Doctora y Asistente y la cuenta inicial de la doctora. Deberías ver:
+
+```
+Cuenta inicial de la doctora creada (...). Deberá cambiar la contraseña en su primer inicio de sesión.
+Now listening on: https://localhost:7111
+```
+
+Deja esa ventana abierta: si la cierras, la aplicación se apaga. Para detenerla, presiona `Ctrl + C`.
+
+En la primera ejecución también verás dos líneas `ERR ... "__EFMigrationsHistory"`. Son normales: EF Core busca su tabla de control antes de crearla. No vuelven a aparecer.
+
+También puedes abrir `Consultorio.slnx` en Visual Studio y presionar `F5` con el perfil `https`.
+
+### Paso 8. Entrar al sistema
+
+Abre https://localhost:7111/admin, inicia sesión con el correo y la contraseña del paso 5, y crea tu contraseña propia cuando el sistema lo pida.
+
+---
+
+## Uso diario
+
+Una vez instalado, cada día solo necesitas:
+
+1. Abrir **Docker Desktop**.
+2. Encender la base de datos (si ya está encendida, no pasa nada):
 
    ```powershell
    docker compose up -d
    ```
 
-3. Configura los secretos de la app (quedan fuera del repositorio):
-
-   ```powershell
-   dotnet user-secrets set "ConnectionStrings:Default" "Host=localhost;Port=5432;Database=consultorio;Username=consultorio;Password=LA_DEL_ENV" --project src/Consultorio.Web
-   dotnet user-secrets set "UsuarioInicial:NombreCompleto" "Gabriela Calero" --project src/Consultorio.Web
-   dotnet user-secrets set "UsuarioInicial:Email" "correo@ejemplo.com" --project src/Consultorio.Web
-   dotnet user-secrets set "UsuarioInicial:Password" "UnaClaveTemporal2026" --project src/Consultorio.Web
-   ```
-
-4. Ejecuta la app (perfil `https`). Al arrancar aplica las migraciones, crea los roles y la cuenta inicial de la doctora:
+3. Ejecutar la aplicación:
 
    ```powershell
    dotnet run --project src/Consultorio.Web
    ```
 
-5. Abre `https://localhost:7111/admin` e inicia sesión. El sistema pedirá cambiar la contraseña inicial.
+4. Abrir https://localhost:7111/admin
+
+Para terminar: `Ctrl + C` en la ventana de la aplicación. Si además quieres apagar la base de datos (los datos se conservan):
+
+```powershell
+docker compose stop
+```
+
+Cuando descargues cambios nuevos del repositorio (`git pull`), no hace falta nada más: al arrancar, la aplicación aplica sola las migraciones pendientes.
+
+---
+
+## Primeros pasos dentro del sistema
+
+1. **Doctora**: en **Usuarios**, pulsa **Nuevo usuario** para crear la cuenta de la asistente. El sistema genera una contraseña temporal que se muestra **una sola vez**: entrégala en persona.
+2. **Asistente**: inicia sesión con esa contraseña temporal y crea la suya.
+3. **Pacientes**: en **Pacientes**, pulsa **Nuevo paciente**, completa los datos y marca la casilla de consentimiento (es obligatoria por la LOPDP).
+
+Qué puede hacer cada rol:
+
+| Acción | Doctora | Asistente |
+|---|---|---|
+| Registrar, buscar y editar pacientes | Sí | Sí |
+| Deshabilitar y habilitar pacientes | Sí | Sí |
+| Ver el historial de cambios de un paciente | Sí | No |
+| Crear usuarios, cambiar roles, restablecer contraseñas | Sí | No |
+
+Un paciente **deshabilitado** no aparece en las búsquedas, conserva todos sus datos y no se puede editar hasta habilitarlo. Para verlo, activa **Mostrar deshabilitados** en la lista.
+
+---
+
+## Pruebas automáticas
+
+```powershell
+dotnet test
+```
+
+Deberías ver dos líneas `Correctas!` (Domain y Application) con `Con error: 0`.
+
+---
 
 ## Comandos frecuentes
 
-| Qué | Comando |
+**Crear una migración** después de cambiar entidades o configuraciones de EF Core:
+
+```powershell
+dotnet ef migrations add NombreDeLaMigracion --project src/Consultorio.Infrastructure --startup-project src/Consultorio.Web --output-dir Persistencia/Migraciones
+```
+
+**Aplicar migraciones sin arrancar la app**:
+
+```powershell
+dotnet ef database update --project src/Consultorio.Infrastructure --startup-project src/Consultorio.Web
+```
+
+**Restablecer una contraseña sin entrar al panel** (emergencia, por ejemplo si la doctora olvidó la suya). Genera una contraseña temporal, desbloquea y reactiva la cuenta:
+
+```powershell
+dotnet run --project src/Consultorio.Web -- restablecer-password correo@ejemplo.com
+```
+
+La contraseña aparece en la consola, debajo de la línea `WRN ... restablecida desde la consola del servidor`. Cada ejecución genera una nueva y anula la anterior.
+
+**Ver las últimas 50 líneas del log más reciente** (en PowerShell; los logs se guardan 30 días en `src/Consultorio.Web/logs/`):
+
+```powershell
+Get-ChildItem src/Consultorio.Web/logs | Sort-Object LastWriteTime | Select-Object -Last 1 | Get-Content -Tail 50 -Encoding UTF8
+```
+
+**Entrar a la base de datos** con la consola de PostgreSQL (para salir escribe `\q`):
+
+```powershell
+docker exec -it consultorio-db psql -U consultorio -d consultorio
+```
+
+---
+
+## Problemas frecuentes
+
+| Mensaje o síntoma | Causa | Solución |
+|---|---|---|
+| `failed to connect to the docker API` | Docker Desktop está cerrado. | Abre Docker Desktop, espera a que arranque y repite `docker compose up -d`. |
+| `Failed to connect to 127.0.0.1:5432` | La base de datos no está encendida. | `docker compose up -d` |
+| `Define POSTGRES_PASSWORD en el archivo .env` | Falta el archivo `.env`. | Repite el paso 3 de la instalación. |
+| `password authentication failed for user "consultorio"` | La contraseña de User Secrets no coincide con la del `.env`. | Repite el paso 5 con la contraseña correcta. Si cambiaste la del `.env` después de crear la base, la base conserva la anterior. |
+| `Falta la cadena de conexión 'ConnectionStrings:Default'` | No se configuraron los User Secrets. | Repite el paso 5. |
+| `No se pudo crear la cuenta inicial de la doctora: ...` | La contraseña inicial no cumple la política. | Usa 10 o más caracteres con mayúscula, minúscula y número (paso 5). |
+| `Configura 'ProteccionDatos:VersionPoliticaPrivacidad'` | Falta esa sección en la configuración. | Revisa `src/Consultorio.Web/appsettings.json`. |
+| El navegador dice "La conexión no es privada" | El certificado de desarrollo no es de confianza. | Repite el paso 6 y reinicia el navegador. |
+| `address already in use` o el puerto 5432 está ocupado | Hay otro PostgreSQL instalado en la computadora. | Detén el otro servicio de PostgreSQL o cambia el puerto en `docker-compose.yml` y en la cadena de conexión. |
+| "Cuenta bloqueada por demasiados intentos" | 5 contraseñas incorrectas seguidas. | Espera 15 minutos, pide a la doctora que la desbloquee en Usuarios, o usa el comando de emergencia. |
+| "Demasiados intentos. Espera un minuto" | Más de 10 envíos por minuto desde la misma computadora. | Espera un minuto. |
+
+---
+
+## Configuración
+
+Se define en `src/Consultorio.Web/appsettings.json`; en producción se puede sobrescribir con variables de entorno (por ejemplo `Consultorio__Nombre`).
+
+| Clave | Para qué |
 |---|---|
-| Pruebas | `dotnet test` |
-| Restaurar herramientas (dotnet-ef) | `dotnet tool restore` |
-| Nueva migración | `dotnet ef migrations add NombreMigracion --project src/Consultorio.Infrastructure --startup-project src/Consultorio.Web --output-dir Persistencia/Migraciones` |
-| Restablecer una contraseña sin entrar al panel (emergencia) | `dotnet run --project src/Consultorio.Web -- restablecer-password correo@ejemplo.com` |
+| `Consultorio:Nombre` y `Consultorio:NombreCorto` | Nombre que se muestra en la web, en el panel y en los títulos de las pestañas. |
+| `ProteccionDatos:VersionPoliticaPrivacidad` | Versión de la política de privacidad que acepta cada paciente. Súbela cuando cambie el texto de la política. |
+| `BaseDatos:AplicarMigracionesAlIniciar` | Aplica las migraciones pendientes al arrancar (válido con una sola instancia de la app). |
+| `UsuarioInicial:*` | Cuenta inicial de la doctora; solo se usa si todavía no existe ninguna. **Nunca en el repositorio.** |
+| `ConnectionStrings:Default` | Conexión a PostgreSQL. **Nunca en el repositorio.** |
+| `DataProtection:RutaClaves` | Carpeta donde se guardan las claves que cifran las sesiones (necesaria en producción con Docker). |
 
-## Estructura
+Si falta una clave obligatoria, la aplicación no arranca y el mensaje indica cuál es.
+
+---
+
+## Estructura del proyecto
 
 ```
+Consultorio.slnx
+docker-compose.yml               Base de datos PostgreSQL para desarrollo
+.env.example                     Plantilla del archivo .env (sin contraseñas reales)
+dotnet-tools.json                Herramientas del proyecto (dotnet-ef)
+Directory.Build.props            Opciones comunes de compilación
+Directory.Packages.props         Versiones de los paquetes NuGet
 src/
-  Consultorio.Domain/          Reglas de negocio (sin dependencias)
-  Consultorio.Application/     Casos de uso, puertos (interfaces) y validadores
-  Consultorio.Infrastructure/  EF Core + PostgreSQL, Identity, migraciones
-  Consultorio.Web/             Blazor: páginas públicas, /cuenta y panel /admin
+  Consultorio.Domain/            Entidades y reglas de negocio (sin dependencias)
+  Consultorio.Application/       Casos de uso, puertos (interfaces) y validadores
+  Consultorio.Infrastructure/    EF Core + PostgreSQL, Identity, auditoría, migraciones
+  Consultorio.Web/               Blazor: página pública, /cuenta y panel /admin
 tests/
-  Consultorio.Application.Tests/
+  Consultorio.Domain.Tests/      Reglas del dominio (cédula, teléfono, paciente)
+  Consultorio.Application.Tests/ Casos de uso y validadores
 ```
-
-Las convenciones y reglas del proyecto están en [CLAUDE.md](CLAUDE.md).

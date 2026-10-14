@@ -1,0 +1,9 @@
+@inject IOptions<OpcionesConsultorio> Consultorio
+
+@* Título de la pestaña del navegador: "Pacientes · Consultorio". Sin texto, muestra el nombre completo. *@
+<PageTitle>@(string.IsNullOrEmpty(Texto) ? Consultorio.Value.Nombre : $"{Texto} · {Consultorio.Value.NombreCorto}")</PageTitle>
+
+@code {
+    [Parameter]
+    public string? Texto { get; set; }
+}

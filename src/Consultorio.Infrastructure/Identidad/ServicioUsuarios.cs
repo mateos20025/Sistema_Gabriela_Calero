@@ -309,18 +309,8 @@ internal sealed class ServicioUsuarios(
 
     /// <summary>
     /// Segunda barrera de seguridad: aunque la página ya exige el rol Doctora, el servicio también lo comprueba.
-    /// Si llega aquí alguien sin permiso es un error de programación o un intento de abuso, no un caso normal.
     /// </summary>
-    private async Task<UsuarioSesion> ExigirDoctoraAsync()
-    {
-        var actor = await usuarioActual.ObtenerAsync();
-        if (actor is not { EsDoctora: true })
-        {
-            throw new UnauthorizedAccessException("Solo la doctora puede gestionar usuarios.");
-        }
-
-        return actor;
-    }
+    private Task<UsuarioSesion> ExigirDoctoraAsync() => usuarioActual.ExigirDoctoraAsync();
 
     // Distinct: como el usuario ES el correo, Identity avisa dos veces del mismo duplicado.
     private static IEnumerable<string> Errores(IdentityResult resultado) =>

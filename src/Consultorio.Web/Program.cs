@@ -4,6 +4,7 @@ using Consultorio.Infrastructure;
 using Consultorio.Infrastructure.Identidad;
 using Consultorio.Infrastructure.Persistencia;
 using Consultorio.Web.Components;
+using Consultorio.Web.Configuracion;
 using Consultorio.Web.Seguridad;
 using MudBlazor.Services;
 using Serilog;
@@ -31,6 +32,12 @@ try
         .AddInteractiveServerComponents();
     builder.Services.AddMudServices(opciones =>
         opciones.SnackbarConfiguration.PositionClass = MudBlazor.Defaults.Classes.Position.BottomRight);
+
+    // Datos del consultorio para la interfaz; si faltan o son inválidos, la app no arranca.
+    builder.Services.AddOptions<OpcionesConsultorio>()
+        .Bind(builder.Configuration.GetSection(OpcionesConsultorio.Seccion))
+        .ValidateDataAnnotations()
+        .ValidateOnStart();
 
     builder.Services.AddAplicacion();
     builder.Services.AddInfraestructura(builder.Configuration);
