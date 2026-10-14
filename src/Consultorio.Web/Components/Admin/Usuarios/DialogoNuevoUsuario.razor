@@ -1,0 +1,68 @@
+@inject IServicioUsuarios ServicioUsuarios
+@inject FluentValidation.IValidator<CrearUsuarioComando> Validador
+
+<MudDialog>
+    <DialogContent>
+        @if (errores.Count > 0)
+        {
+            <MudAlert Severity="Severity.Error" Class="mb-4" role="alert">
+                @foreach (var error in errores)
+                {
+                    <div>@error</div>
+                }
+            </MudAlert>
+        }
+
+        <MudForm @ref="formulario" Model="modelo" Validation="@Validador.ParaMudForm()">
+            <MudTextField @bind-Value="modelo.NombreCompleto" For="() => modelo.NombreCompleto"
+                          Label="Nombre completo" Variant="Variant.Outlined" AutoFocus="true" Class="mb-3" />
+            <MudTextField @bind-Value="modelo.Email" For="() => modelo.Email" InputType="InputType.Email"
+                          Label="Correo electrónico" Variant="Variant.Outlined" Class="mb-3" />
+            <MudSelect T="string" @bind-Value="modelo.Rol" For="() => modelo.Rol" Label="Rol" Variant="Variant.Outlined">
+                @foreach (var rol in Roles.Todos)
+                {
+                    <MudSelectItem T="string" Value="rol">@rol</MudSelectItem>
+                }
+            </MudSelect>
+        </MudForm>
+
+        <MudText Typo="Typo.caption" Class="d-block mt-4 mud-text-secondary">
+            El sistema generará una contraseña temporal. La persona deberá cambiarla en su primer inicio de sesión.
+        </MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => Dialogo.Cancel()">Cancelar</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="GuardarAsync" Disabled="guardando">Crear usuario</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance Dialogo { get; set; } = default!;
+
+    private MudForm formulario = default!;
+    private readonly CrearUsuarioComando modelo = new();
+    private IReadOnlyList<string> errores = [];
+    private bool guardando;
+
+    private async Task GuardarAsync()
+    {
+        await formulario.ValidateAsync();
+        if (!formulario.IsValid)
+        {
+            return;
+        }
+
+        guardando = true;
+        var resultado = await ServicioUsuarios.CrearAsync(modelo, CancellationToken.None);
+        guardando = false;
+
+        if (!resultado.Exito)
+        {
+            errores = resultado.Errores;
+            return;
+        }
+
+        Dialogo.Close(DialogResult.Ok(new CredencialTemporal(modelo.NombreCompleto.Trim(), modelo.Email.Trim(), resultado.Valor!)));
+    }
+}

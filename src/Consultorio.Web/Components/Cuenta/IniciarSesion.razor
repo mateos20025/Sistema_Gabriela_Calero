@@ -1,0 +1,91 @@
+@page "/cuenta/iniciar-sesion"
+@inject IServicioCuenta ServicioCuenta
+@inject NavigationManager Navegacion
+
+<PageTitle>Iniciar sesión · Consultorio</PageTitle>
+
+<MudText Typo="Typo.h5" HtmlTag="h1" Class="mb-1">Iniciar sesión</MudText>
+<MudText Typo="Typo.body2" Class="mb-6 mud-text-secondary">Acceso exclusivo para el personal del consultorio.</MudText>
+
+@if (mensajeError is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4" role="alert">@mensajeError</MudAlert>
+}
+
+@* method="post" + FormName: el formulario se envía al servidor como un formulario HTML clásico. *@
+<EditForm Model="Input" FormName="iniciar-sesion" method="post" OnValidSubmit="IniciarSesionAsync" novalidate>
+    <ValidadorFluent />
+
+    <div class="campo">
+        <label for="email">Correo electrónico</label>
+        <InputText id="email" type="email" @bind-Value="Input.Email" autocomplete="username" autofocus />
+        <ValidationMessage For="() => Input.Email" />
+    </div>
+
+    <div class="campo">
+        <label for="password">Contraseña</label>
+        <InputText id="password" type="password" @bind-Value="Input.Password" autocomplete="current-password" />
+        <ValidationMessage For="() => Input.Password" />
+    </div>
+
+    <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary"
+               Size="Size.Large" FullWidth="true" Class="mt-2">Ingresar</MudButton>
+</EditForm>
+
+<MudText Typo="Typo.caption" Class="d-block mt-6 mud-text-secondary">
+    ¿Olvidaste tu contraseña? Pide a la doctora que la restablezca desde el panel.
+</MudText>
+
+@code {
+    private string? mensajeError;
+
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    [SupplyParameterFromForm]
+    private IniciarSesionComando Input { get; set; } = default!;
+
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    protected override void OnInitialized()
+    {
+        Input ??= new();
+
+        // Si ya tiene sesión, no tiene sentido mostrar el formulario.
+        if (HttpMethods.IsGet(HttpContext.Request.Method) && HttpContext.User.Identity?.IsAuthenticated == true)
+        {
+            Navegacion.NavigateTo(RutasCuenta.DestinoSeguro(ReturnUrl));
+        }
+    }
+
+    private async Task IniciarSesionAsync()
+    {
+        var resultado = await ServicioCuenta.IniciarSesionAsync(Input, HttpContext.RequestAborted);
+
+        switch (resultado)
+        {
+            case ResultadoInicioSesion.Exitoso:
+                Navegacion.NavigateTo(RutasCuenta.DestinoSeguro(ReturnUrl));
+                return;
+
+            case ResultadoInicioSesion.DebeCambiarPassword:
+                Navegacion.NavigateTo(RutasCuenta.CambiarPassword);
+                return;
+
+            case ResultadoInicioSesion.Bloqueado:
+                mensajeError = "Por seguridad, la cuenta está bloqueada unos minutos por demasiados intentos fallidos. " +
+                               "Espera o pide a la doctora que la desbloquee.";
+                break;
+
+            default:
+                // Mismo mensaje si el correo no existe, la contraseña es incorrecta o la cuenta está
+                // desactivada: así nadie puede averiguar qué correos tienen cuenta.
+                mensajeError = "Correo o contraseña incorrectos.";
+                break;
+        }
+
+        // No devolver la contraseña escrita dentro del HTML de la respuesta.
+        Input.Password = "";
+    }
+}

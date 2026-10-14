@@ -1,0 +1,26 @@
+# Entorno de DESARROLLO: solo la base de datos. La app se ejecuta desde Visual Studio.
+# Uso:  docker compose up -d
+# Las variables (${...}) se leen del archivo .env (ver .env.example).
+services:
+  db:
+    image: postgres:17
+    container_name: consultorio-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-consultorio}
+      POSTGRES_USER: ${POSTGRES_USER:-consultorio}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en el archivo .env}
+      TZ: UTC
+    ports:
+      # Solo accesible desde esta computadora (127.0.0.1), no desde la red.
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - datos-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  datos-postgres:

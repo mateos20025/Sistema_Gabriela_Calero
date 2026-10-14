@@ -1,0 +1,77 @@
+@inherits LayoutComponentBase
+@inject NavigationManager Navegacion
+
+<MudThemeProvider Theme="TemaConsultorio.Tema" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudLayout>
+    <MudAppBar Elevation="1">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start"
+                       OnClick="() => menuAbierto = !menuAbierto" aria-label="Abrir o cerrar el menú" />
+        <MudText Typo="Typo.h6" Class="ml-2">Consultorio</MudText>
+        <MudSpacer />
+
+        <AuthorizeView>
+            <MudText Typo="Typo.body2" Class="mr-2 d-none d-sm-flex">@NombreDe(context.User)</MudText>
+        </AuthorizeView>
+
+        <MudTooltip Text="Cambiar contraseña">
+            @* forceLoad: esa página no es interactiva, necesita una carga completa. *@
+            <MudIconButton Icon="@Icons.Material.Filled.Key" Color="Color.Inherit" aria-label="Cambiar contraseña"
+                           OnClick="() => Navegacion.NavigateTo(RutasCuenta.CambiarPassword, forceLoad: true)" />
+        </MudTooltip>
+
+        <form action="@RutasCuenta.CerrarSesion" method="post">
+            <AntiforgeryToken />
+            <MudTooltip Text="Cerrar sesión">
+                <MudIconButton ButtonType="ButtonType.Submit" Icon="@Icons.Material.Filled.Logout"
+                               Color="Color.Inherit" aria-label="Cerrar sesión" />
+            </MudTooltip>
+        </form>
+    </MudAppBar>
+
+    <MudDrawer @bind-Open="menuAbierto" ClipMode="DrawerClipMode.Always" Elevation="1" Variant="DrawerVariant.Responsive">
+        <MudNavMenu Class="mt-2">
+            <MudNavLink Href="@RutasCuenta.Panel" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard">Inicio</MudNavLink>
+            <AuthorizeView Roles="@Roles.Doctora">
+                <MudNavLink Href="/admin/usuarios" Icon="@Icons.Material.Filled.People">Usuarios</MudNavLink>
+            </AuthorizeView>
+        </MudNavMenu>
+    </MudDrawer>
+
+    <MudMainContent>
+        <MudContainer MaxWidth="MaxWidth.Large" Class="py-6">
+            @* Si una pantalla falla, se muestra este aviso en lugar de romper toda la aplicación. *@
+            <ErrorBoundary @ref="limiteErrores">
+                <ChildContent>
+                    @Body
+                </ChildContent>
+                <ErrorContent>
+                    <MudAlert Severity="Severity.Error" Class="mb-4">
+                        Ocurrió un error inesperado y ya quedó registrado. Vuelve a intentarlo; si se repite, avisa al soporte técnico.
+                    </MudAlert>
+                    <MudButton Variant="Variant.Outlined" OnClick="() => limiteErrores?.Recover()">Reintentar</MudButton>
+                </ErrorContent>
+            </ErrorBoundary>
+        </MudContainer>
+    </MudMainContent>
+</MudLayout>
+
+<div id="blazor-error-ui" data-nosnippet>
+    Ocurrió un error inesperado.
+    <a href="." class="reload">Recargar</a>
+    <span class="dismiss">🗙</span>
+</div>
+
+@code {
+    private bool menuAbierto = true;
+    private ErrorBoundary? limiteErrores;
+
+    // Al cambiar de página se limpia el error de la página anterior.
+    protected override void OnParametersSet() => limiteErrores?.Recover();
+
+    private static string NombreDe(ClaimsPrincipal usuario) =>
+        usuario.FindFirst(ClaimsConsultorio.NombreCompleto)?.Value ?? usuario.Identity?.Name ?? "";
+}

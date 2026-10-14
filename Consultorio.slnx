@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Consultorio.Application/Consultorio.Application.csproj" />
+    <Project Path="src/Consultorio.Domain/Consultorio.Domain.csproj" />
+    <Project Path="src/Consultorio.Infrastructure/Consultorio.Infrastructure.csproj" />
+    <Project Path="src/Consultorio.Web/Consultorio.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Consultorio.Application.Tests/Consultorio.Application.Tests.csproj" />
+  </Folder>
+</Solution>

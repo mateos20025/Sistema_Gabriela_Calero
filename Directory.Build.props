@@ -1,0 +1,12 @@
+<Project>
+  <!-- Configuración común a TODOS los proyectos de la solución. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <!-- Una advertencia del compilador es un error: obliga a mantener el código limpio. -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- Los avisos de paquetes vulnerables se muestran, pero no rompen la compilación. -->
+    <WarningsNotAsErrors>NU1901;NU1902;NU1903;NU1904</WarningsNotAsErrors>
+  </PropertyGroup>
+</Project>

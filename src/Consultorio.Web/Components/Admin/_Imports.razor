@@ -1,0 +1,4 @@
+@* Seguro por defecto: TODA página dentro de /Admin exige ser doctora o asistente
+   (con la contraseña temporal ya cambiada). Las páginas pueden pedir más, nunca menos. *@
+@layout LayoutAdmin
+@attribute [Authorize(Policy = Politicas.Personal)]

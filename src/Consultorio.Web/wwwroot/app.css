@@ -1,0 +1,140 @@
+/* Estilos globales. Los colores vienen del tema de MudBlazor (variables --mud-*). */
+
+body {
+    font-family: var(--mud-typography-default-family);
+    background-color: var(--mud-palette-background);
+}
+
+h1:focus {
+    outline: none;
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+
+/* ---------- Páginas de cuenta (iniciar sesión, cambiar contraseña) ---------- */
+
+.cuenta-fondo {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+}
+
+.cuenta-contenedor {
+    width: 100%;
+    max-width: 420px;
+}
+
+.cuenta-marca {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 20px;
+    color: var(--mud-palette-text-primary);
+    text-decoration: none;
+}
+
+.cuenta-cargando {
+    padding: 24px;
+    text-align: center;
+}
+
+/* Campos de formulario de las páginas estáticas (imitan los campos "outlined" de MudBlazor). */
+.campo {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 20px;
+}
+
+.campo label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--mud-palette-text-primary);
+}
+
+.campo input {
+    font: inherit;
+    font-size: 1rem;
+    padding: 12px 14px;
+    border: 1px solid var(--mud-palette-lines-inputs);
+    border-radius: var(--mud-default-borderradius);
+    background: var(--mud-palette-surface);
+    color: var(--mud-palette-text-primary);
+}
+
+.campo input:focus {
+    outline: none;
+    border-color: var(--mud-palette-primary);
+    box-shadow: 0 0 0 1px var(--mud-palette-primary);
+}
+
+.campo input.invalid {
+    border-color: var(--mud-palette-error);
+}
+
+.campo .validation-message {
+    color: var(--mud-palette-error);
+    font-size: 0.8rem;
+}
+
+.campo-ayuda {
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.8rem;
+}
+
+/* ---------- Panel ---------- */
+
+.modulo {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.credencial input {
+    font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+    letter-spacing: 0.08em;
+}
+
+/* ---------- Error de Blazor (aparece si se cae la conexión con un error) ---------- */
+
+#blazor-error-ui {
+    color-scheme: light only;
+    background: #fff3cd;
+    bottom: 0;
+    box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2);
+    box-sizing: border-box;
+    display: none;
+    left: 0;
+    padding: 0.6rem 1.25rem 0.7rem 1.25rem;
+    position: fixed;
+    width: 100%;
+    z-index: 2000;
+}
+
+#blazor-error-ui .dismiss {
+    cursor: pointer;
+    position: absolute;
+    right: 0.75rem;
+    top: 0.5rem;
+}
+
+.blazor-error-boundary {
+    background: #b32121;
+    padding: 1rem;
+    color: white;
+}
+
+.blazor-error-boundary::after {
+    content: "Ocurrió un error.";
+}

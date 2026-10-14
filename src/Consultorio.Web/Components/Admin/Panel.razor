@@ -1,0 +1,65 @@
+@page "/admin"
+@inject IRelojSistema Reloj
+
+<PageTitle>Panel · Consultorio</PageTitle>
+
+<AuthorizeView Context="sesion">
+    <MudText Typo="Typo.h4" HtmlTag="h1" Class="mb-1">Hola, @Nombre(sesion.User)</MudText>
+    <MudText Class="mb-6 mud-text-secondary">
+        @(sesion.User.IsInRole(Roles.Doctora) ? Roles.Doctora : Roles.Asistente) · @Hoy
+    </MudText>
+
+    <MudGrid>
+        @foreach (var modulo in modulos)
+        {
+            <MudItem xs="12" sm="6" md="4">
+                <MudCard Outlined="true" Class="modulo">
+                    <MudCardContent>
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-2">
+                            <MudIcon Icon="@modulo.Icono" Color="Color.Primary" />
+                            <MudText Typo="Typo.h6">@modulo.Titulo</MudText>
+                        </MudStack>
+                        <MudText Typo="Typo.body2">@modulo.Descripcion</MudText>
+                    </MudCardContent>
+                    <MudCardActions>
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">Próximamente</MudChip>
+                    </MudCardActions>
+                </MudCard>
+            </MudItem>
+        }
+
+        @if (sesion.User.IsInRole(Roles.Doctora))
+        {
+            <MudItem xs="12" sm="6" md="4">
+                <MudCard Outlined="true" Class="modulo">
+                    <MudCardContent>
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-2">
+                            <MudIcon Icon="@Icons.Material.Filled.People" Color="Color.Primary" />
+                            <MudText Typo="Typo.h6">Usuarios</MudText>
+                        </MudStack>
+                        <MudText Typo="Typo.body2">Cuentas del personal: crear, desactivar y restablecer contraseñas.</MudText>
+                    </MudCardContent>
+                    <MudCardActions>
+                        <MudButton Href="/admin/usuarios" Variant="Variant.Text" Color="Color.Primary">Gestionar</MudButton>
+                    </MudCardActions>
+                </MudCard>
+            </MudItem>
+        }
+    </MudGrid>
+</AuthorizeView>
+
+@code {
+    private sealed record Modulo(string Titulo, string Descripcion, string Icono);
+
+    private static readonly Modulo[] modulos =
+    [
+        new("Citas", "Cola de solicitudes, confirmaciones y agenda diaria y semanal.", Icons.Material.Filled.Event),
+        new("Pacientes", "Registro e identificación de pacientes por cédula.", Icons.Material.Filled.Badge),
+        new("Pagos", "Validación de transferencias y pagos en efectivo.", Icons.Material.Filled.Payments),
+    ];
+
+    private string Hoy => Reloj.AhoraEcuador.ToString("dddd d 'de' MMMM 'de' yyyy");
+
+    private static string Nombre(ClaimsPrincipal usuario) =>
+        usuario.FindFirst(ClaimsConsultorio.NombreCompleto)?.Value ?? usuario.Identity?.Name ?? "";
+}

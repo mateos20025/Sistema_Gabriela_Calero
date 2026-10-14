@@ -1,0 +1,14 @@
+<Router AppAssembly="typeof(Program).Assembly" NotFoundPage="typeof(Pages.NoEncontrado)">
+    <Found Context="routeData">
+        @* AuthorizeRouteView aplica los [Authorize] de cada página también al navegar dentro de la app. *@
+        <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Layout.LayoutPublico)">
+            <NotAuthorized>
+                <RedirigirSegunAcceso Usuario="context.User" />
+            </NotAuthorized>
+            <Authorizing>
+                <MudProgressLinear Indeterminate Color="Color.Primary" />
+            </Authorizing>
+        </AuthorizeRouteView>
+        <FocusOnNavigate RouteData="routeData" Selector="h1" />
+    </Found>
+</Router>

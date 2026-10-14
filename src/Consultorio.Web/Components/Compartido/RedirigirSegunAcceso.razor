@@ -1,0 +1,27 @@
+@inject NavigationManager Navegacion
+
+@code {
+    // Se muestra cuando alguien intenta abrir una página sin permiso:
+    //  - sin sesión               -> a iniciar sesión (y luego vuelve a donde iba)
+    //  - con contraseña temporal  -> a cambiar la contraseña
+    //  - con sesión, sin permiso  -> a "acceso denegado"
+    [Parameter, EditorRequired]
+    public ClaimsPrincipal Usuario { get; set; } = default!;
+
+    protected override void OnInitialized()
+    {
+        if (Usuario.Identity?.IsAuthenticated != true)
+        {
+            var volverA = "/" + Navegacion.ToBaseRelativePath(Navegacion.Uri);
+            Navegacion.NavigateTo($"{RutasCuenta.IniciarSesion}?ReturnUrl={Uri.EscapeDataString(volverA)}", forceLoad: true);
+        }
+        else if (Politicas.DebeCambiarPassword(Usuario))
+        {
+            Navegacion.NavigateTo(RutasCuenta.CambiarPassword, forceLoad: true);
+        }
+        else
+        {
+            Navegacion.NavigateTo(RutasCuenta.AccesoDenegado, forceLoad: true);
+        }
+    }
+}

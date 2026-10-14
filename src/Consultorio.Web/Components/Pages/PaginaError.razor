@@ -1,0 +1,31 @@
+@page "/error"
+@attribute [ExcludeFromInteractiveRouting]
+@layout LayoutCuenta
+@using System.Diagnostics
+
+<PageTitle>Error · Consultorio</PageTitle>
+
+<MudText Typo="Typo.h5" HtmlTag="h1" Class="mb-2">Algo salió mal</MudText>
+<MudText Class="mb-4">
+    Ocurrió un error inesperado al procesar tu solicitud. Ya quedó registrado para revisarlo.
+</MudText>
+
+@if (!string.IsNullOrEmpty(codigoReferencia))
+{
+    <MudText Typo="Typo.caption" Class="d-block mb-4">
+        Código de referencia: <code>@codigoReferencia</code>
+    </MudText>
+}
+
+<MudButton Href="/" Variant="Variant.Filled" Color="Color.Primary" FullWidth="true">Volver al inicio</MudButton>
+
+@code {
+    [CascadingParameter]
+    private HttpContext? HttpContext { get; set; }
+
+    private string? codigoReferencia;
+
+    // El código permite encontrar el error exacto en los logs sin mostrar detalles técnicos al usuario.
+    protected override void OnInitialized() =>
+        codigoReferencia = Activity.Current?.Id ?? HttpContext?.TraceIdentifier;
+}

@@ -1,0 +1,39 @@
+@inherits LayoutComponentBase
+@inject NavigationManager Navegacion
+
+<MudThemeProvider Theme="TemaConsultorio.Tema" />
+
+@if (HttpContext is null)
+{
+    <p class="cuenta-cargando">Cargando…</p>
+}
+else
+{
+    <main class="cuenta-fondo">
+        <div class="cuenta-contenedor">
+            <a href="/" class="cuenta-marca">
+                <MudIcon Icon="@Icons.Material.Filled.LocalHospital" Color="Color.Primary" />
+                <span>Consultorio <strong>Dra. Gabriela Calero</strong></span>
+            </a>
+            <MudPaper Elevation="2" Class="pa-6 pa-sm-8">
+                @Body
+            </MudPaper>
+        </div>
+    </main>
+}
+
+@code {
+    // Las páginas de cuenta escriben la cookie de sesión, así que necesitan una petición HTTP real.
+    // Si se llega aquí navegando desde una pantalla interactiva no hay HttpContext: se recarga la página
+    // completa para que el servidor la genere de forma estática.
+    [CascadingParameter]
+    private HttpContext? HttpContext { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        if (HttpContext is null)
+        {
+            Navegacion.Refresh(forceReload: true);
+        }
+    }
+}

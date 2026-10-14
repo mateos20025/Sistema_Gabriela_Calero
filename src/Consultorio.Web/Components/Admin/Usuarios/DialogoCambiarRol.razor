@@ -1,0 +1,30 @@
+<MudDialog>
+    <DialogContent>
+        <MudText Class="mb-4">
+            Elige el nuevo rol de <b>@Usuario.NombreCompleto</b>. Su sesión se cerrará para aplicar los permisos nuevos.
+        </MudText>
+        <MudRadioGroup T="string" @bind-Value="rolElegido">
+            @foreach (var rol in Roles.Todos)
+            {
+                <MudRadio T="string" Value="rol" Color="Color.Primary">@rol</MudRadio>
+            }
+        </MudRadioGroup>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => Dialogo.Cancel()">Cancelar</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="rolElegido == Usuario.Rol"
+                   OnClick="() => Dialogo.Close(DialogResult.Ok(rolElegido))">Guardar</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance Dialogo { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public UsuarioResumen Usuario { get; set; } = default!;
+
+    private string rolElegido = "";
+
+    protected override void OnInitialized() => rolElegido = Usuario.Rol;
+}

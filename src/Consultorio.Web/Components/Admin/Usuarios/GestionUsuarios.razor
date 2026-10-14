@@ -1,0 +1,215 @@
+@page "/admin/usuarios"
+@attribute [Authorize(Policy = Politicas.SoloDoctora)]
+@inject IServicioUsuarios ServicioUsuarios
+@inject IUsuarioActual UsuarioActual
+@inject IDialogService Dialogos
+@inject ISnackbar Snackbar
+
+<PageTitle>Usuarios · Consultorio</PageTitle>
+
+<MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Class="mb-4">
+    <div>
+        <MudText Typo="Typo.h4" HtmlTag="h1">Usuarios</MudText>
+        <MudText Typo="Typo.body2" Class="mud-text-secondary">Cuentas del personal con acceso al panel.</MudText>
+    </div>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.PersonAdd"
+               OnClick="CrearAsync">Nuevo usuario</MudButton>
+</MudStack>
+
+<MudTable Items="usuarios" Loading="cargando" LoadingProgressColor="Color.Primary" Hover="true"
+          Breakpoint="Breakpoint.Sm" Elevation="1">
+    <HeaderContent>
+        <MudTh>Nombre</MudTh>
+        <MudTh>Correo</MudTh>
+        <MudTh>Rol</MudTh>
+        <MudTh>Estado</MudTh>
+        <MudTh>Último acceso</MudTh>
+        <MudTh><span class="sr-only">Acciones</span></MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Nombre">
+            @context.NombreCompleto
+            @if (context.Id == miId)
+            {
+                <MudText Typo="Typo.caption" Class="mud-text-secondary"> (tú)</MudText>
+            }
+        </MudTd>
+        <MudTd DataLabel="Correo">@context.Email</MudTd>
+        <MudTd DataLabel="Rol">@context.Rol</MudTd>
+        <MudTd DataLabel="Estado">
+            @if (!context.Activo)
+            {
+                <MudChip T="string" Size="Size.Small">Inactivo</MudChip>
+            }
+            else if (context.Bloqueado)
+            {
+                <MudChip T="string" Size="Size.Small" Color="Color.Error">Bloqueado</MudChip>
+            }
+            else
+            {
+                <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Outlined">Activo</MudChip>
+            }
+            @if (context.DebeCambiarPassword)
+            {
+                <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">Contraseña temporal</MudChip>
+            }
+        </MudTd>
+        <MudTd DataLabel="Último acceso">@Formatear(context.UltimoAccesoUtc)</MudTd>
+        <MudTd>
+            @* La doctora no puede modificarse a sí misma: así siempre queda al menos una doctora activa. *@
+            @if (context.Id != miId)
+            {
+                <MudMenu Icon="@Icons.Material.Filled.MoreVert" AriaLabel="@($"Acciones para {context.NombreCompleto}")" Dense="true">
+                    <MudMenuItem Icon="@Icons.Material.Filled.ManageAccounts" OnClick="() => CambiarRolAsync(context)">Cambiar rol</MudMenuItem>
+                    <MudMenuItem Icon="@Icons.Material.Filled.LockReset" OnClick="() => RestablecerPasswordAsync(context)">Restablecer contraseña</MudMenuItem>
+                    @if (context.Bloqueado)
+                    {
+                        <MudMenuItem Icon="@Icons.Material.Filled.LockOpen" OnClick="() => DesbloquearAsync(context)">Desbloquear</MudMenuItem>
+                    }
+                    @if (context.Activo)
+                    {
+                        <MudMenuItem Icon="@Icons.Material.Filled.PersonOff" OnClick="() => DesactivarAsync(context)">Desactivar</MudMenuItem>
+                    }
+                    else
+                    {
+                        <MudMenuItem Icon="@Icons.Material.Filled.Person" OnClick="() => ActivarAsync(context)">Activar</MudMenuItem>
+                    }
+                </MudMenu>
+            }
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText>Todavía no hay usuarios.</MudText>
+    </NoRecordsContent>
+</MudTable>
+
+@code {
+    private static readonly DialogOptions OpcionesDialogo = new()
+    {
+        MaxWidth = MaxWidth.Small,
+        FullWidth = true,
+        CloseOnEscapeKey = true,
+    };
+
+    private IReadOnlyList<UsuarioResumen> usuarios = [];
+    private bool cargando = true;
+    private Guid? miId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        miId = (await UsuarioActual.ObtenerAsync())?.Id;
+        await CargarAsync();
+    }
+
+    private async Task CargarAsync()
+    {
+        cargando = true;
+        usuarios = await ServicioUsuarios.ListarAsync(CancellationToken.None);
+        cargando = false;
+    }
+
+    private async Task CrearAsync()
+    {
+        var dialogo = await Dialogos.ShowAsync<DialogoNuevoUsuario>("Nuevo usuario", OpcionesDialogo);
+        var resultado = await dialogo.Result;
+
+        if (resultado is { Canceled: false, Data: CredencialTemporal credencial })
+        {
+            await CargarAsync();
+            await MostrarCredencialAsync("Usuario creado", credencial);
+        }
+    }
+
+    private async Task CambiarRolAsync(UsuarioResumen usuario)
+    {
+        var parametros = new DialogParameters<DialogoCambiarRol> { { d => d.Usuario, usuario } };
+        var dialogo = await Dialogos.ShowAsync<DialogoCambiarRol>("Cambiar rol", parametros, OpcionesDialogo);
+        var resultado = await dialogo.Result;
+
+        if (resultado is { Canceled: false, Data: string nuevoRol })
+        {
+            await EjecutarAsync(
+                ServicioUsuarios.CambiarRolAsync(usuario.Id, nuevoRol, CancellationToken.None),
+                $"Se cambió el rol de {usuario.NombreCompleto} a {nuevoRol}.");
+        }
+    }
+
+    private async Task RestablecerPasswordAsync(UsuarioResumen usuario)
+    {
+        var confirmado = await Dialogos.ShowMessageBoxAsync(
+            "Restablecer contraseña",
+            $"Se generará una contraseña temporal para {usuario.NombreCompleto} y se cerrarán sus sesiones abiertas. ¿Continuar?",
+            yesText: "Restablecer",
+            cancelText: "Cancelar");
+
+        if (confirmado != true)
+        {
+            return;
+        }
+
+        var resultado = await ServicioUsuarios.RestablecerPasswordAsync(usuario.Id, CancellationToken.None);
+        await CargarAsync();
+
+        if (resultado.Exito)
+        {
+            await MostrarCredencialAsync("Contraseña restablecida", new CredencialTemporal(usuario.NombreCompleto, usuario.Email, resultado.Valor!));
+        }
+        else
+        {
+            Snackbar.Add(string.Join(" ", resultado.Errores), Severity.Error);
+        }
+    }
+
+    private async Task DesactivarAsync(UsuarioResumen usuario)
+    {
+        var confirmado = await Dialogos.ShowMessageBoxAsync(
+            "Desactivar usuario",
+            $"{usuario.NombreCompleto} no podrá iniciar sesión y sus sesiones abiertas se cerrarán. Podrás reactivar la cuenta cuando quieras. ¿Continuar?",
+            yesText: "Desactivar",
+            cancelText: "Cancelar");
+
+        if (confirmado == true)
+        {
+            await EjecutarAsync(
+                ServicioUsuarios.DesactivarAsync(usuario.Id, CancellationToken.None),
+                $"Se desactivó la cuenta de {usuario.NombreCompleto}.");
+        }
+    }
+
+    private Task ActivarAsync(UsuarioResumen usuario) =>
+        EjecutarAsync(
+            ServicioUsuarios.ActivarAsync(usuario.Id, CancellationToken.None),
+            $"Se activó la cuenta de {usuario.NombreCompleto}.");
+
+    private Task DesbloquearAsync(UsuarioResumen usuario) =>
+        EjecutarAsync(
+            ServicioUsuarios.DesbloquearAsync(usuario.Id, CancellationToken.None),
+            $"Se desbloqueó la cuenta de {usuario.NombreCompleto}.");
+
+    private async Task EjecutarAsync(Task<Resultado> accion, string mensajeExito)
+    {
+        var resultado = await accion;
+
+        if (resultado.Exito)
+        {
+            Snackbar.Add(mensajeExito, Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add(string.Join(" ", resultado.Errores), Severity.Error);
+        }
+
+        await CargarAsync();
+    }
+
+    private async Task MostrarCredencialAsync(string titulo, CredencialTemporal credencial)
+    {
+        var parametros = new DialogParameters<DialogoCredencialTemporal> { { d => d.Credencial, credencial } };
+        var opciones = OpcionesDialogo with { BackdropClick = false, CloseOnEscapeKey = false };
+        var dialogo = await Dialogos.ShowAsync<DialogoCredencialTemporal>(titulo, parametros, opciones);
+        await dialogo.Result;
+    }
+
+    private static string Formatear(DateTime? fechaUtc) =>
+        fechaUtc is null ? "Nunca" : HoraEcuador.DesdeUtc(fechaUtc.Value).ToString("dd/MM/yyyy HH:mm");
+}

@@ -1,0 +1,42 @@
+@inject IJSRuntime JS
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudText Class="mb-4">
+            Entrega estos datos a <b>@Credencial.NombreCompleto</b> por un medio seguro (de preferencia en persona).
+            Por seguridad, la contraseña <b>no se volverá a mostrar</b>.
+        </MudText>
+        <MudTextField T="string" Value="Credencial.Email" Label="Correo" ReadOnly="true" Variant="Variant.Outlined" Class="mb-3" />
+        <MudTextField T="string" Value="Credencial.Password" Label="Contraseña temporal" ReadOnly="true" Variant="Variant.Outlined"
+                      Class="credencial" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.ContentCopy"
+                      AdornmentAriaLabel="Copiar contraseña" OnAdornmentClick="CopiarAsync" />
+        <MudAlert Severity="Severity.Info" Dense="true" Class="mt-4">
+            Al iniciar sesión, el sistema le pedirá crear una contraseña propia.
+        </MudAlert>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="() => Dialogo.Close()">Listo</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance Dialogo { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public CredencialTemporal Credencial { get; set; } = default!;
+
+    private async Task CopiarAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", Credencial.Password);
+            Snackbar.Add("Contraseña copiada.", Severity.Info);
+        }
+        catch (JSException)
+        {
+            Snackbar.Add("No se pudo copiar automáticamente. Selecciónala y cópiala a mano.", Severity.Warning);
+        }
+    }
+}
