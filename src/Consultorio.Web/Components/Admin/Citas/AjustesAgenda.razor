@@ -1,0 +1,272 @@
+@page "/admin/agenda/configuracion"
+@attribute [Authorize(Policy = Politicas.SoloDoctora)]
+@inject ObtenerConfiguracionAgenda Obtener
+@inject ActualizarConfiguracionAgenda Actualizar
+@inject ListarBloqueos ListarBloqueos
+@inject CrearBloqueo CrearBloqueo
+@inject EliminarBloqueo EliminarBloqueo
+@inject FluentValidation.IValidator<ConfiguracionAgendaComando> Validador
+@inject IRelojSistema Reloj
+@inject IDialogService Dialogos
+@inject ISnackbar Snackbar
+
+<Titulo Texto="Configuración de la agenda" />
+
+<MudButton Href="@RutasPanel.Agenda" Variant="Variant.Text" StartIcon="@Icons.Material.Filled.ArrowBack" Class="mb-2">Agenda</MudButton>
+
+<MudText Typo="Typo.h4" HtmlTag="h1">Configuración de la agenda</MudText>
+<MudText Typo="Typo.body2" Class="mb-4 mud-text-secondary">
+    Duración de las citas, reglas para pedir cita, horario de atención y días bloqueados. Los cambios quedan en la auditoría.
+</MudText>
+
+@if (modelo is null)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+}
+else
+{
+    <MudPaper Elevation="1" Class="pa-6 mb-6" Style="max-width:860px">
+        <MensajesError Errores="errores" />
+
+        <MudForm @ref="formulario" Model="modelo" Validation="@Validador.ParaMudForm()">
+            <MudText Typo="Typo.h6" Class="mb-2">Citas</MudText>
+            <MudGrid Spacing="2" Class="mb-4">
+                <MudItem xs="12" sm="6" md="4">
+                    <MudNumericField T="int" @bind-Value="modelo.DuracionCitaMinutos" For="() => modelo.DuracionCitaMinutos"
+                                     Label="Duración de cada cita (minutos)" Variant="Variant.Outlined" Step="5"
+                                     Min="ConfiguracionAgenda.DuracionMinimaMinutos" Max="ConfiguracionAgenda.DuracionMaximaMinutos" />
+                </MudItem>
+                <MudItem xs="12" sm="6" md="4">
+                    <MudNumericField T="int" @bind-Value="modelo.AnticipacionMinimaHoras" For="() => modelo.AnticipacionMinimaHoras"
+                                     Label="Anticipación mínima (horas)" Variant="Variant.Outlined" Min="0"
+                                     Max="ConfiguracionAgenda.AnticipacionMinimaMaximaHoras"
+                                     HelperText="No se ofrecen horarios que empiecen antes." />
+                </MudItem>
+                <MudItem xs="12" sm="6" md="4">
+                    <MudNumericField T="int" @bind-Value="modelo.AnticipacionMaximaDias" For="() => modelo.AnticipacionMaximaDias"
+                                     Label="Agenda abierta (días adelante)" Variant="Variant.Outlined" Min="1"
+                                     Max="ConfiguracionAgenda.AnticipacionMaximaLimiteDias" />
+                </MudItem>
+            </MudGrid>
+
+            <MudText Typo="Typo.h6" Class="mb-2">Solicitudes desde la página web</MudText>
+            <MudSwitch T="bool" @bind-Value="modelo.SolicitudesWebHabilitadas" Color="Color.Primary" Class="mb-2"
+                       Label="Los pacientes pueden pedir cita desde la página web" />
+            <MudGrid Spacing="2" Class="mb-4">
+                <MudItem xs="12" sm="6">
+                    <MudNumericField T="int" @bind-Value="modelo.HorasReservaSolicitud" For="() => modelo.HorasReservaSolicitud"
+                                     Label="Reserva del horario (horas)" Variant="Variant.Outlined" Min="1"
+                                     Max="ConfiguracionAgenda.HorasReservaMaximas"
+                                     HelperText="Tiempo para llamar y confirmar; después el horario se libera." />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField T="int" @bind-Value="modelo.MaximoSolicitudesActivasPorCedula" For="() => modelo.MaximoSolicitudesActivasPorCedula"
+                                     Label="Máximo de citas activas por cédula" Variant="Variant.Outlined" Min="1"
+                                     Max="ConfiguracionAgenda.SolicitudesActivasLimite"
+                                     HelperText="Evita que una persona acapare horarios." />
+                </MudItem>
+            </MudGrid>
+
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-2">
+                <MudText Typo="Typo.h6">Horario de atención (hora de Ecuador)</MudText>
+                <MudButton Variant="Variant.Text" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="AgregarFranja"
+                           Disabled="modelo.Franjas.Count >= HorarioAtencion.MaximoFranjas">Agregar franja</MudButton>
+            </MudStack>
+
+            @if (modelo.Franjas.Count == 0)
+            {
+                <MudAlert Severity="Severity.Info" Class="mb-4">Sin franjas: no se ofrecerá ningún horario. Agrega al menos una.</MudAlert>
+            }
+
+            @foreach (var franja in modelo.Franjas)
+            {
+                <MudGrid Spacing="2" Class="mb-1" @key="franja">
+                    <MudItem xs="12" sm="4">
+                        <MudSelect T="DayOfWeek" @bind-Value="franja.DiaSemana" Label="Día" Variant="Variant.Outlined" Margin="Margin.Dense">
+                            @foreach (var dia in DiasDeLaSemana)
+                            {
+                                <MudSelectItem T="DayOfWeek" Value="dia">@Formato.DiaSemana(dia)</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="5" sm="3">
+                        <MudTimePicker Editable="true" @bind-Time="franja.Inicio" Label="Desde" AmPm="false" MinuteSelectionStep="5"
+                                       Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    </MudItem>
+                    <MudItem xs="5" sm="3">
+                        <MudTimePicker Editable="true" @bind-Time="franja.Fin" Label="Hasta" AmPm="false" MinuteSelectionStep="5"
+                                       Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    </MudItem>
+                    <MudItem xs="2" sm="2" Class="d-flex align-center">
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" aria-label="Quitar franja" OnClick="() => modelo.Franjas.Remove(franja)" />
+                    </MudItem>
+                </MudGrid>
+            }
+        </MudForm>
+
+        <MudStack Row="true" Justify="Justify.FlexEnd" Class="mt-4">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="GuardarAsync" Disabled="guardando">Guardar configuración</MudButton>
+        </MudStack>
+    </MudPaper>
+
+    <MudPaper Elevation="1" Class="pa-6" Style="max-width:860px">
+        <MudText Typo="Typo.h6">Bloqueos</MudText>
+        <MudText Typo="Typo.body2" Class="mb-4 mud-text-secondary">
+            Vacaciones, feriados o compromisos: en esos períodos no se ofrecen horarios. Si hay citas activas, primero reprográmalas o cancélalas.
+        </MudText>
+
+        <MensajesError Errores="erroresBloqueo" />
+
+        <MudGrid Spacing="2" Class="mb-2">
+            <MudItem xs="12" sm="6">
+                <MudDatePicker Editable="true" @bind-Date="bloqueo.Desde" Label="Desde" MinDate="Hoy" AutoClose="true" DateFormat="dd/MM/yyyy"
+                               Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudDatePicker Editable="true" @bind-Date="bloqueo.Hasta" Label="Hasta" MinDate="bloqueo.Desde ?? Hoy" AutoClose="true" DateFormat="dd/MM/yyyy"
+                               Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudSwitch T="bool" @bind-Value="bloqueo.DiaCompleto" Color="Color.Primary" Label="Días completos" />
+            </MudItem>
+            @if (!bloqueo.DiaCompleto)
+            {
+                <MudItem xs="6">
+                    <MudTimePicker Editable="true" @bind-Time="bloqueo.HoraDesde" Label="Hora de inicio (primer día)" AmPm="false" MinuteSelectionStep="5"
+                                   Variant="Variant.Outlined" Margin="Margin.Dense" />
+                </MudItem>
+                <MudItem xs="6">
+                    <MudTimePicker Editable="true" @bind-Time="bloqueo.HoraHasta" Label="Hora de fin (último día)" AmPm="false" MinuteSelectionStep="5"
+                                   Variant="Variant.Outlined" Margin="Margin.Dense" />
+                </MudItem>
+            }
+            <MudItem xs="12" sm="9">
+                <MudTextField T="string" @bind-Value="bloqueo.Motivo" Label="Motivo" Variant="Variant.Outlined" Margin="Margin.Dense"
+                              MaxLength="BloqueoAgenda.LongitudMaximaMotivo" HelperText="Por ejemplo: Vacaciones, Feriado, Congreso." />
+            </MudItem>
+            <MudItem xs="12" sm="3" Class="d-flex align-center">
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" FullWidth="true" OnClick="BloquearAsync" Disabled="guardandoBloqueo">
+                    Bloquear
+                </MudButton>
+            </MudItem>
+        </MudGrid>
+
+        @if (bloqueos.Count == 0)
+        {
+            <MudText Class="mud-text-secondary">No hay bloqueos vigentes ni próximos.</MudText>
+        }
+        else
+        {
+            <MudSimpleTable Dense="true" Hover="true" Elevation="0">
+                <thead><tr><th>Desde</th><th>Hasta</th><th>Motivo</th><th></th></tr></thead>
+                <tbody>
+                    @foreach (var item in bloqueos)
+                    {
+                        <tr>
+                            <td>@Formato.FechaHora(item.InicioUtc)</td>
+                            <td>@Formato.FechaHora(item.FinUtc)</td>
+                            <td>@item.Motivo</td>
+                            <td style="text-align:right">
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" aria-label="Quitar bloqueo"
+                                               OnClick="() => QuitarBloqueoAsync(item)" />
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </MudSimpleTable>
+        }
+    </MudPaper>
+}
+
+@code {
+    /// <summary>De lunes a domingo, como se lee una semana en Ecuador.</summary>
+    private static readonly DayOfWeek[] DiasDeLaSemana =
+    [
+        DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday,
+        DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday,
+    ];
+
+    private MudForm formulario = default!;
+    private ConfiguracionAgendaComando? modelo;
+    private IReadOnlyList<string> errores = [];
+    private bool guardando;
+
+    private CrearBloqueoComando bloqueo = new();
+    private IReadOnlyList<BloqueoVista> bloqueos = [];
+    private IReadOnlyList<string> erroresBloqueo = [];
+    private bool guardandoBloqueo;
+
+    private DateTime Hoy => CalculadoraDisponibilidad.FechaEcuador(Reloj.AhoraUtc).ToDateTime(TimeOnly.MinValue);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarConfiguracionAsync();
+        await CargarBloqueosAsync();
+    }
+
+    private async Task CargarConfiguracionAsync() =>
+        modelo = ConfiguracionAgendaComando.Desde(await Obtener.EjecutarAsync(CancellationToken.None));
+
+    private async Task CargarBloqueosAsync() => bloqueos = await ListarBloqueos.EjecutarAsync(CancellationToken.None);
+
+    private void AgregarFranja()
+    {
+        // La nueva franja toma el día siguiente a la última, para agilizar la carga de la semana.
+        var ultimo = modelo!.Franjas.LastOrDefault()?.DiaSemana;
+        var dia = ultimo is null ? DayOfWeek.Monday : (DayOfWeek)(((int)ultimo.Value + 1) % 7);
+        modelo.Franjas.Add(new FranjaComando { DiaSemana = dia });
+    }
+
+    private async Task GuardarAsync()
+    {
+        await formulario.ValidateAsync();
+        if (!formulario.IsValid)
+        {
+            return;
+        }
+
+        guardando = true;
+        var resultado = await Actualizar.EjecutarAsync(modelo!, CancellationToken.None);
+        guardando = false;
+
+        errores = resultado.Errores;
+        if (resultado.Exito)
+        {
+            Snackbar.Add("Configuración de la agenda guardada.", Severity.Success);
+            await CargarConfiguracionAsync();
+        }
+    }
+
+    private async Task BloquearAsync()
+    {
+        guardandoBloqueo = true;
+        var resultado = await CrearBloqueo.EjecutarAsync(bloqueo, CancellationToken.None);
+        guardandoBloqueo = false;
+
+        erroresBloqueo = resultado.Errores;
+        if (resultado.Exito)
+        {
+            Snackbar.Add("Período bloqueado.", Severity.Success);
+            bloqueo = new CrearBloqueoComando();
+            await CargarBloqueosAsync();
+        }
+    }
+
+    private async Task QuitarBloqueoAsync(BloqueoVista item)
+    {
+        var confirmado = await Dialogos.ShowMessageBoxAsync(
+            "Quitar bloqueo",
+            $"Se volverán a ofrecer horarios entre el {Formato.FechaHora(item.InicioUtc)} y el {Formato.FechaHora(item.FinUtc)}.",
+            yesText: "Quitar",
+            cancelText: "Cancelar");
+
+        if (confirmado != true)
+        {
+            return;
+        }
+
+        var resultado = await EliminarBloqueo.EjecutarAsync(item.Id, CancellationToken.None);
+        Snackbar.Add(resultado.Exito ? "Bloqueo quitado." : string.Join(" ", resultado.Errores), resultado.Exito ? Severity.Success : Severity.Error);
+        await CargarBloqueosAsync();
+    }
+}

@@ -8,6 +8,9 @@ public sealed class RegistrarPagoComando
 {
     public Guid PacienteId { get; set; }
 
+    /// <summary>Cita a la que corresponde el pago (opcional). Debe ser del mismo paciente.</summary>
+    public Guid? CitaId { get; set; }
+
     public MetodoPago Metodo { get; set; } = MetodoPago.Transferencia;
 
     public string Monto { get; set; } = "";

@@ -34,9 +34,12 @@ internal sealed class RepositorioPagos(FabricaContextos fabrica) : IRepositorioP
                 join registrador in db.Users on pago.RegistradoPorId equals registrador.Id
                 join resolutor in db.Users on pago.ResueltoPorId equals resolutor.Id into resolutores
                 from resolutor in resolutores.DefaultIfEmpty()
+                join cita in db.Citas on pago.CitaId equals cita.Id into citas
+                from cita in citas.DefaultIfEmpty()
                 select new
                 {
                     pago,
+                    CitaInicio = cita != null ? cita.Inicio : (DateTime?)null,
                     PacienteNombre = paciente.Nombres + " " + paciente.Apellidos,
                     paciente.Cedula,
                     RegistradoPor = registrador.NombreCompleto,
@@ -51,7 +54,7 @@ internal sealed class RepositorioPagos(FabricaContextos fabrica) : IRepositorioP
 
         var p = fila.pago;
         return new PagoDetalle(
-            p.Id, p.PacienteId, fila.PacienteNombre, fila.Cedula, p.Metodo, p.Estado, p.Monto, p.Concepto,
+            p.Id, p.PacienteId, fila.PacienteNombre, fila.Cedula, p.CitaId, fila.CitaInicio, p.Metodo, p.Estado, p.Monto, p.Concepto,
             p.NumeroComprobante, p.ComprobanteTipo, p.ComprobanteTamanoBytes, fila.RegistradoPor, p.CreadoEn,
             fila.ResueltoPor, p.ResueltoEn, p.MotivoResolucion, []);
     }
@@ -124,6 +127,22 @@ internal sealed class RepositorioPagos(FabricaContextos fabrica) : IRepositorioP
         return await (
                 from pago in db.Pagos.AsNoTracking()
                 where pago.PacienteId == pacienteId
+                join paciente in db.Pacientes.IgnoreQueryFilters() on pago.PacienteId equals paciente.Id
+                orderby pago.CreadoEn descending
+                select new PagoResumen(
+                    pago.Id, pago.PacienteId, paciente.Nombres + " " + paciente.Apellidos, paciente.Cedula,
+                    pago.Metodo, pago.Estado, pago.Monto, pago.Concepto, pago.CreadoEn))
+            .Take(MaximoPagosPorPaciente)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<PagoResumen>> ListarPorCitaAsync(Guid citaId, CancellationToken cancellationToken)
+    {
+        await using var db = await fabrica.CrearAsync(cancellationToken);
+
+        return await (
+                from pago in db.Pagos.AsNoTracking()
+                where pago.CitaId == citaId
                 join paciente in db.Pacientes.IgnoreQueryFilters() on pago.PacienteId equals paciente.Id
                 orderby pago.CreadoEn descending
                 select new PagoResumen(

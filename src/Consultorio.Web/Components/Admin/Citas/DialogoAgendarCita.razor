@@ -1,0 +1,96 @@
+@inject AgendarCita Agendar
+@inject BuscarPacientes Buscar
+
+@* Agendar una cita desde el panel (por teléfono o en persona). Queda confirmada. *@
+
+<MudDialog>
+    <DialogContent>
+        <MensajesError Errores="errores" />
+
+        @if (PacienteId is null)
+        {
+            <MudAutocomplete T="PacienteResumen" Label="Paciente" Variant="Variant.Outlined" Class="mb-3"
+                             SearchFunc="BuscarPacientesAsync" ToStringFunc="TextoPaciente" MinCharacters="2"
+                             DebounceInterval="300" ShowProgressIndicator="true" ResetValueOnEmptyText="true"
+                             Value="pacienteElegido" ValueChanged="ElegirPaciente"
+                             HelperText="Escribe el nombre, apellido o cédula. Si es nuevo, regístralo primero en Pacientes." />
+        }
+        else
+        {
+            <MudTextField T="string" Value="PacienteNombre" Label="Paciente" ReadOnly="true" Variant="Variant.Outlined" Class="mb-3" />
+        }
+
+        <SelectorHorario @bind-Seleccionado="modelo.InicioUtc" FechaInicial="FechaInicial" />
+
+        <MudTextField T="string" @bind-Value="modelo.Observacion" Label="Observación (opcional)" Variant="Variant.Outlined"
+                      Lines="2" Class="mt-4" MaxLength="@Cita.LongitudMaximaObservacion" Counter="@Cita.LongitudMaximaObservacion"
+                      HelperText="No escribas diagnósticos ni datos clínicos aquí." />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => Dialogo.Cancel()">Cancelar</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="GuardarAsync"
+                   Disabled="guardando || modelo.PacienteId == Guid.Empty || modelo.InicioUtc is null">
+            Agendar
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance Dialogo { get; set; } = default!;
+
+    /// <summary>Si viene de la ficha del paciente, el paciente ya está elegido.</summary>
+    [Parameter]
+    public Guid? PacienteId { get; set; }
+
+    [Parameter]
+    public string? PacienteNombre { get; set; }
+
+    /// <summary>Horario elegido en la agenda (opcional).</summary>
+    [Parameter]
+    public DateTime? InicioSugerido { get; set; }
+
+    [Parameter]
+    public DateOnly? FechaInicial { get; set; }
+
+    private readonly AgendarCitaComando modelo = new();
+    private PacienteResumen? pacienteElegido;
+    private IReadOnlyList<string> errores = [];
+    private bool guardando;
+
+    protected override void OnInitialized()
+    {
+        modelo.PacienteId = PacienteId ?? Guid.Empty;
+        modelo.InicioUtc = InicioSugerido;
+    }
+
+    private async Task<IEnumerable<PacienteResumen>> BuscarPacientesAsync(string texto, CancellationToken cancellationToken)
+    {
+        var pagina = await Buscar.EjecutarAsync(new FiltroPacientes(texto, IncluirDeshabilitados: false, Pagina: 0, TamanoPagina: 10), cancellationToken);
+        return pagina.Elementos;
+    }
+
+    private static string TextoPaciente(PacienteResumen? paciente) =>
+        paciente is null ? "" : $"{paciente.Nombres} {paciente.Apellidos} ({paciente.Cedula})";
+
+    private void ElegirPaciente(PacienteResumen? paciente)
+    {
+        pacienteElegido = paciente;
+        modelo.PacienteId = paciente?.Id ?? Guid.Empty;
+    }
+
+    private async Task GuardarAsync()
+    {
+        guardando = true;
+        var resultado = await Agendar.EjecutarAsync(modelo, CancellationToken.None);
+        guardando = false;
+
+        if (!resultado.Exito)
+        {
+            errores = resultado.Errores;
+            return;
+        }
+
+        Dialogo.Close(DialogResult.Ok(resultado.Valor));
+    }
+}

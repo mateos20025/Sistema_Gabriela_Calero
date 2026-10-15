@@ -1,13 +1,14 @@
-@inject ListarPagosDePaciente Listar
+@inject ListarPagosDePaciente ListarDePaciente
+@inject ListarPagosDeCita ListarDeCita
 @inject IDialogService Dialogos
 @inject ISnackbar Snackbar
 
-@* Bloque "Pagos" de la ficha del paciente. *@
+@* Bloque "Pagos" de la ficha del paciente o, si se indica CitaId, de una cita. *@
 
 <MudCard Outlined="true">
     <MudCardHeader>
         <CardHeaderContent>
-            <MudText Typo="Typo.h6">Pagos</MudText>
+            <MudText Typo="Typo.h6">@(CitaId is null ? "Pagos" : "Pagos de esta cita")</MudText>
         </CardHeaderContent>
         <CardHeaderActions>
             @if (Habilitado)
@@ -25,7 +26,7 @@
         }
         else if (pagos.Count == 0)
         {
-            <MudText Class="mud-text-secondary">Sin pagos registrados.</MudText>
+            <MudText Class="mud-text-secondary">@(CitaId is null ? "Sin pagos registrados." : "Sin pagos registrados para esta cita.")</MudText>
         }
         else
         {
@@ -55,14 +56,22 @@
     [Parameter, EditorRequired]
     public string NombrePaciente { get; set; } = "";
 
+    /// <summary>Si se indica, solo se muestran los pagos de esa cita y los nuevos quedan asociados a ella.</summary>
+    [Parameter]
+    public Guid? CitaId { get; set; }
+
     /// <summary>A un paciente deshabilitado no se le registran pagos.</summary>
     [Parameter]
     public bool Habilitado { get; set; }
 
     private IReadOnlyList<PagoResumen>? pagos;
 
-    protected override async Task OnParametersSetAsync() =>
-        pagos = await Listar.EjecutarAsync(PacienteId, CancellationToken.None);
+    protected override Task OnParametersSetAsync() => CargarAsync();
+
+    private async Task CargarAsync() =>
+        pagos = CitaId is { } citaId
+            ? await ListarDeCita.EjecutarAsync(citaId, CancellationToken.None)
+            : await ListarDePaciente.EjecutarAsync(PacienteId, CancellationToken.None);
 
     private async Task RegistrarAsync()
     {
@@ -70,6 +79,7 @@
         {
             { d => d.PacienteId, PacienteId },
             { d => d.PacienteNombre, NombrePaciente },
+            { d => d.CitaId, CitaId },
         };
         var opciones = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, BackdropClick = false };
         var dialogo = await Dialogos.ShowAsync<DialogoRegistrarPago>("Registrar pago", parametros, opciones);
@@ -78,7 +88,7 @@
         if (resultado is { Canceled: false })
         {
             Snackbar.Add("Pago registrado.", Severity.Success);
-            pagos = await Listar.EjecutarAsync(PacienteId, CancellationToken.None);
+            await CargarAsync();
         }
     }
 }

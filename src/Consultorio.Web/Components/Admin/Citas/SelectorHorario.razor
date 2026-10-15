@@ -1,0 +1,117 @@
+@inject ConsultarDisponibilidad Consultar
+@inject IRelojSistema Reloj
+
+@* Elegir un horario libre: días con disponibilidad de las próximas dos semanas y, al elegir uno, sus horarios.
+   Solo se ofrecen horarios calculados por el servidor (horario de atención, bloqueos y citas ocupadas). *@
+
+@if (sinConfigurar)
+{
+    <MudAlert Severity="Severity.Warning">@MensajesCitas.AgendaNoConfigurada</MudAlert>
+}
+else
+{
+    <MudDatePicker Label="Buscar desde" Date="desde" DateChanged="CambiarDesdeAsync" MinDate="Hoy" AutoClose="true"
+                   Variant="Variant.Outlined" Margin="Margin.Dense" DateFormat="dd/MM/yyyy" Class="mb-3" />
+
+    @if (cargando)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mb-3" />
+    }
+    else if (diasConHorarios.Count == 0)
+    {
+        <MudAlert Severity="Severity.Info" Class="mb-3">
+            No hay horarios libres entre el @Formato.FechaCorta(DesdeComoFecha) y el @Formato.FechaCorta(DesdeComoFecha.AddDays(ConsultarDisponibilidad.DiasMaximos - 1)).
+            Elige una fecha posterior.
+        </MudAlert>
+    }
+    else
+    {
+        <MudText Typo="Typo.subtitle2" Class="mb-1">Día</MudText>
+        <div class="d-flex flex-wrap gap-2 mb-3" role="group" aria-label="Días con horarios libres">
+            @foreach (var dia in diasConHorarios)
+            {
+                <MudButton Size="Size.Small" Color="Color.Primary"
+                           Variant="@(dia.Fecha == diaElegido?.Fecha ? Variant.Filled : Variant.Outlined)"
+                           OnClick="() => diaElegido = dia">
+                    @Formato.FechaCorta(dia.Fecha) (@dia.Horarios.Count)
+                </MudButton>
+            }
+        </div>
+
+        @if (diaElegido is not null)
+        {
+            <MudText Typo="Typo.subtitle2" Class="mb-1">Hora · @Formato.FechaLarga(diaElegido.Fecha)</MudText>
+            <div class="d-flex flex-wrap gap-2" role="group" aria-label="Horarios libres">
+                @foreach (var horario in diaElegido.Horarios)
+                {
+                    <MudButton Size="Size.Small" Color="Color.Secondary"
+                               Variant="@(horario.Inicio == Seleccionado ? Variant.Filled : Variant.Outlined)"
+                               OnClick="() => ElegirAsync(horario)">
+                        @Formato.Hora(horario.Inicio)
+                    </MudButton>
+                }
+            </div>
+        }
+    }
+}
+
+@code {
+    /// <summary>Inicio (UTC) del horario elegido.</summary>
+    [Parameter]
+    public DateTime? Seleccionado { get; set; }
+
+    [Parameter]
+    public EventCallback<DateTime?> SeleccionadoChanged { get; set; }
+
+    /// <summary>Al reprogramar, el horario actual de la cita no cuenta como ocupado.</summary>
+    [Parameter]
+    public Guid? ExcluirCitaId { get; set; }
+
+    /// <summary>Fecha (Ecuador) desde la que se empieza a buscar; por defecto, hoy.</summary>
+    [Parameter]
+    public DateOnly? FechaInicial { get; set; }
+
+    private DateTime? desde;
+    private List<DiaDisponible> diasConHorarios = [];
+    private DiaDisponible? diaElegido;
+    private bool cargando = true;
+    private bool sinConfigurar;
+
+    private DateTime Hoy => CalculadoraDisponibilidad.FechaEcuador(Reloj.AhoraUtc).ToDateTime(TimeOnly.MinValue);
+
+    private DateOnly DesdeComoFecha => DateOnly.FromDateTime(desde ?? Hoy);
+
+    protected override Task OnInitializedAsync()
+    {
+        var inicial = FechaInicial?.ToDateTime(TimeOnly.MinValue);
+        desde = inicial is { } fecha && fecha > Hoy ? fecha : Hoy;
+        return CargarAsync();
+    }
+
+    private Task CambiarDesdeAsync(DateTime? fecha)
+    {
+        desde = fecha ?? Hoy;
+        return CargarAsync();
+    }
+
+    private async Task CargarAsync()
+    {
+        cargando = true;
+        var dias = await Consultar.EjecutarAsync(DesdeComoFecha, ConsultarDisponibilidad.DiasMaximos, ExcluirCitaId, CancellationToken.None);
+        cargando = false;
+
+        sinConfigurar = dias is null;
+        diasConHorarios = dias?.Where(d => d.Horarios.Count > 0).ToList() ?? [];
+
+        // Si ya había un horario elegido (por ejemplo, desde la agenda), se abre su día.
+        diaElegido = diasConHorarios.FirstOrDefault(d => d.Horarios.Any(h => h.Inicio == Seleccionado))
+                     ?? diasConHorarios.FirstOrDefault();
+
+        if (Seleccionado is not null && !diasConHorarios.Any(d => d.Horarios.Any(h => h.Inicio == Seleccionado)))
+        {
+            await SeleccionadoChanged.InvokeAsync(null);
+        }
+    }
+
+    private Task ElegirAsync(IntervaloUtc horario) => SeleccionadoChanged.InvokeAsync(horario.Inicio);
+}

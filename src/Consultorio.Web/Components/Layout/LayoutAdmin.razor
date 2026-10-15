@@ -36,6 +36,8 @@
     <MudDrawer @bind-Open="menuAbierto" ClipMode="DrawerClipMode.Always" Elevation="1" Variant="DrawerVariant.Responsive">
         <MudNavMenu Class="mt-2">
             <MudNavLink Href="@RutasCuenta.Panel" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard">Inicio</MudNavLink>
+            <MudNavLink Href="@RutasPanel.Agenda" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.CalendarMonth">Agenda</MudNavLink>
+            <MudNavLink Href="@RutasPanel.Citas" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.PhoneCallback">Citas</MudNavLink>
             <MudNavLink Href="@RutasPanel.Pacientes" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Badge">Pacientes</MudNavLink>
             <MudNavLink Href="@RutasPanel.Pagos" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Payments">Pagos</MudNavLink>
             <AuthorizeView Roles="@Roles.Doctora">

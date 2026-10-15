@@ -1,0 +1,82 @@
+@inject ListarCitasDePaciente Listar
+@inject IDialogService Dialogos
+@inject ISnackbar Snackbar
+
+@* Bloque "Citas" de la ficha del paciente. *@
+
+<MudCard Outlined="true">
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6">Citas</MudText>
+        </CardHeaderContent>
+        <CardHeaderActions>
+            @if (Habilitado)
+            {
+                <MudButton Variant="Variant.Text" Color="Color.Primary" StartIcon="@Icons.Material.Filled.EventAvailable" OnClick="AgendarAsync">
+                    Agendar cita
+                </MudButton>
+            }
+        </CardHeaderActions>
+    </MudCardHeader>
+    <MudCardContent>
+        @if (citas is null)
+        {
+            <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+        }
+        else if (citas.Count == 0)
+        {
+            <MudText Class="mud-text-secondary">Sin citas registradas.</MudText>
+        }
+        else
+        {
+            <MudSimpleTable Dense="true" Hover="true" Elevation="0">
+                <thead><tr><th>Fecha y hora</th><th>Origen</th><th>Estado</th></tr></thead>
+                <tbody>
+                    @foreach (var cita in citas)
+                    {
+                        <tr>
+                            <td><MudLink Href="@RutasPanel.Cita(cita.Id)">@Formato.FechaHora(cita.InicioUtc)</MudLink></td>
+                            <td>@Formato.Origen(cita.Origen)</td>
+                            <td><ChipEstadoCita Estado="cita.Estado" /></td>
+                        </tr>
+                    }
+                </tbody>
+            </MudSimpleTable>
+        }
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Parameter, EditorRequired]
+    public Guid PacienteId { get; set; }
+
+    [Parameter, EditorRequired]
+    public string NombrePaciente { get; set; } = "";
+
+    /// <summary>A un paciente deshabilitado no se le agendan citas.</summary>
+    [Parameter]
+    public bool Habilitado { get; set; }
+
+    private IReadOnlyList<CitaResumen>? citas;
+
+    protected override async Task OnParametersSetAsync() =>
+        citas = await Listar.EjecutarAsync(PacienteId, CancellationToken.None);
+
+    private async Task AgendarAsync()
+    {
+        var parametros = new DialogParameters<DialogoAgendarCita>
+        {
+            { d => d.PacienteId, PacienteId },
+            { d => d.PacienteNombre, NombrePaciente },
+        };
+        var opciones = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, BackdropClick = false };
+        var dialogo = await Dialogos.ShowAsync<DialogoAgendarCita>("Agendar cita", parametros, opciones);
+        var resultado = await dialogo.Result;
+
+        if (resultado is { Canceled: false })
+        {
+            Snackbar.Add("Cita agendada y confirmada.", Severity.Success);
+            citas = await Listar.EjecutarAsync(PacienteId, CancellationToken.None);
+        }
+    }
+}

@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using Consultorio.Application.Pagos;
+using Consultorio.Application.Tests.Citas;
 using Consultorio.Application.Tests.Pacientes;
 using Consultorio.Domain.Pagos;
 
@@ -10,12 +11,13 @@ public class RegistrarPagoTests
     private readonly RepositorioPagosEnMemoria pagos = new();
     private readonly RepositorioPacientesEnMemoria pacientes = new();
     private readonly AlmacenArchivosEnMemoria almacen = new();
+    private readonly RepositorioCitasEnMemoria citas = new();
     private readonly Domain.Pacientes.Paciente paciente = DatosPrueba.Paciente();
 
     public RegistrarPagoTests() => pacientes.Pacientes.Add(paciente);
 
     private RegistrarPago CasoDeUso(UsuarioActualFalso? usuario = null) =>
-        new(pagos, pacientes, almacen, usuario ?? UsuarioActualFalso.Asistente(), new RegistrarPagoValidador());
+        new(pagos, pacientes, citas, almacen, usuario ?? UsuarioActualFalso.Asistente(), new RegistrarPagoValidador());
 
     private RegistrarPagoComando Comando(MetodoPago metodo = MetodoPago.Transferencia, string monto = "35,50") => new()
     {
@@ -169,6 +171,45 @@ public class RegistrarPagoTests
 
         Assert.False(resultado.Exito);
         Assert.Empty(pagos.Pagos);
+    }
+
+    [Fact]
+    public async Task Asocia_el_pago_a_una_cita_del_mismo_paciente()
+    {
+        var cita = DatosCitas.Confirmada(paciente.Id, DatosCitas.HorarioLunes(9));
+        citas.Citas.Add(cita);
+        var comando = Comando(MetodoPago.Efectivo);
+        comando.CitaId = cita.Id;
+
+        var resultado = await CasoDeUso().EjecutarAsync(comando, null, CancellationToken.None);
+
+        Assert.True(resultado.Exito);
+        Assert.Equal(cita.Id, Assert.Single(pagos.Pagos).CitaId);
+    }
+
+    [Fact]
+    public async Task No_acepta_una_cita_de_otro_paciente()
+    {
+        var cita = DatosCitas.Confirmada(Guid.NewGuid(), DatosCitas.HorarioLunes(9));
+        citas.Citas.Add(cita);
+        var comando = Comando(MetodoPago.Efectivo);
+        comando.CitaId = cita.Id;
+
+        var resultado = await CasoDeUso().EjecutarAsync(comando, null, CancellationToken.None);
+
+        Assert.Equal([MensajesPagos.CitaNoCorresponde], resultado.Errores);
+        Assert.Empty(pagos.Pagos);
+    }
+
+    [Fact]
+    public async Task No_acepta_una_cita_que_no_existe()
+    {
+        var comando = Comando(MetodoPago.Efectivo);
+        comando.CitaId = Guid.NewGuid();
+
+        var resultado = await CasoDeUso().EjecutarAsync(comando, null, CancellationToken.None);
+
+        Assert.Equal([MensajesPagos.CitaNoCorresponde], resultado.Errores);
     }
 
     [Fact]

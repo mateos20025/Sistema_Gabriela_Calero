@@ -1,5 +1,6 @@
 using System.Threading.RateLimiting;
 using Consultorio.Application.Abstracciones;
+using Consultorio.Web.Navegacion;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
@@ -63,13 +64,7 @@ public static class ConfiguracionSeguridad
 
         services.AddRateLimiter(opciones =>
         {
-            // Máximo 10 envíos de formularios de cuenta por minuto desde la misma IP (frena ataques de fuerza bruta).
-            opciones.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(contexto =>
-                HttpMethods.IsPost(contexto.Request.Method) && contexto.Request.Path.StartsWithSegments("/cuenta")
-                    ? RateLimitPartition.GetFixedWindowLimiter(
-                        contexto.Connection.RemoteIpAddress?.ToString() ?? "desconocida",
-                        _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 })
-                    : RateLimitPartition.GetNoLimiter("sin-limite"));
+            opciones.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(ParticionLimite);
 
             opciones.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
             opciones.OnRejected = async (contexto, cancellationToken) =>
@@ -83,6 +78,39 @@ public static class ConfiguracionSeguridad
         services.AddHsts(opciones => opciones.MaxAge = TimeSpan.FromDays(365));
 
         return services;
+    }
+
+    /// <summary>
+    /// Límites por IP:
+    /// <list type="bullet">
+    /// <item>Formularios de cuenta: 10 envíos por minuto (frena ataques de fuerza bruta).</item>
+    /// <item>Solicitar cita: 5 envíos cada 10 minutos (frena el acaparamiento de horarios).</item>
+    /// <item>Consultar horarios públicos: 60 por minuto (cada consulta calcula la disponibilidad).</item>
+    /// </list>
+    /// </summary>
+    private static RateLimitPartition<string> ParticionLimite(HttpContext contexto)
+    {
+        var ip = contexto.Connection.RemoteIpAddress?.ToString() ?? "desconocida";
+        var ruta = contexto.Request.Path;
+        var esEnvio = HttpMethods.IsPost(contexto.Request.Method);
+
+        if (esEnvio && ruta.StartsWithSegments("/cuenta"))
+        {
+            return Ventana($"cuenta:{ip}", 10, TimeSpan.FromMinutes(1));
+        }
+
+        if (ruta.StartsWithSegments(RutasPublicas.SolicitarCita))
+        {
+            return esEnvio
+                ? Ventana($"solicitar-cita:{ip}", 5, TimeSpan.FromMinutes(10))
+                : Ventana($"consultar-horarios:{ip}", 60, TimeSpan.FromMinutes(1));
+        }
+
+        return RateLimitPartition.GetNoLimiter("sin-limite");
+
+        static RateLimitPartition<string> Ventana(string clave, int permitidos, TimeSpan ventana) =>
+            RateLimitPartition.GetFixedWindowLimiter(
+                clave, _ => new FixedWindowRateLimiterOptions { PermitLimit = permitidos, Window = ventana, QueueLimit = 0 });
     }
 
     /// <summary>Cabeceras HTTP que endurecen el navegador contra ataques comunes.</summary>

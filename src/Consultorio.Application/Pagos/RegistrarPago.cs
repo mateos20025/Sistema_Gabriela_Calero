@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using Consultorio.Application.Abstracciones;
+using Consultorio.Application.Citas;
 using Consultorio.Application.Comun;
 using Consultorio.Application.Pacientes;
 using Consultorio.Domain.Pagos;
@@ -13,6 +14,7 @@ namespace Consultorio.Application.Pagos;
 public sealed class RegistrarPago(
     IRepositorioPagos pagos,
     IRepositorioPacientes pacientes,
+    IRepositorioCitas citas,
     IAlmacenArchivos almacen,
     IUsuarioActual usuarioActual,
     IValidator<RegistrarPagoComando> validador)
@@ -41,6 +43,16 @@ public sealed class RegistrarPago(
             return Resultado<Guid>.Falla(MensajesPagos.PacienteDeshabilitado);
         }
 
+        var citaId = comando.CitaId is { } id && id != Guid.Empty ? id : (Guid?)null;
+        if (citaId is not null)
+        {
+            var cita = await citas.ObtenerPorIdAsync(citaId.Value, cancellationToken);
+            if (cita is null || cita.PacienteId != paciente.Id)
+            {
+                return Resultado<Guid>.Falla(MensajesPagos.CitaNoCorresponde);
+            }
+        }
+
         MontoDolares.TryParse(comando.Monto, out var monto);
 
         if (comando.Metodo == MetodoPago.Efectivo)
@@ -50,16 +62,22 @@ public sealed class RegistrarPago(
                 return Resultado<Guid>.Falla(MensajesPagos.EfectivoSinComprobante);
             }
 
-            var pagoEfectivo = Pago.RegistrarEfectivo(paciente.Id, monto, comando.Concepto, sesion.Id);
+            var pagoEfectivo = Pago.RegistrarEfectivo(paciente.Id, monto, comando.Concepto, sesion.Id, citaId);
             await pagos.AgregarAsync(pagoEfectivo, cancellationToken);
             return Resultado<Guid>.Ok(pagoEfectivo.Id);
         }
 
-        return await RegistrarTransferenciaAsync(comando, archivo, paciente.Id, monto, sesion.Id, cancellationToken);
+        return await RegistrarTransferenciaAsync(comando, archivo, paciente.Id, citaId, monto, sesion.Id, cancellationToken);
     }
 
     private async Task<Resultado<Guid>> RegistrarTransferenciaAsync(
-        RegistrarPagoComando comando, ArchivoSubido? archivo, Guid pacienteId, decimal monto, Guid usuarioId, CancellationToken cancellationToken)
+        RegistrarPagoComando comando,
+        ArchivoSubido? archivo,
+        Guid pacienteId,
+        Guid? citaId,
+        decimal monto,
+        Guid usuarioId,
+        CancellationToken cancellationToken)
     {
         if (archivo is null || archivo.Contenido.Length == 0)
         {
@@ -90,7 +108,8 @@ public sealed class RegistrarPago(
         try
         {
             var comprobante = new ComprobanteTransferencia(archivoId, tipo, archivo.Contenido.Length, hash);
-            var pago = Pago.RegistrarTransferencia(pacienteId, monto, comando.Concepto, comando.NumeroComprobante, comprobante, usuarioId);
+            var pago = Pago.RegistrarTransferencia(
+                pacienteId, monto, comando.Concepto, comando.NumeroComprobante, comprobante, usuarioId, citaId);
             await pagos.AgregarAsync(pago, cancellationToken);
             return Resultado<Guid>.Ok(pago.Id);
         }

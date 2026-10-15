@@ -25,15 +25,21 @@ Todos los comandos se escriben en **Developer PowerShell** (o en el Símbolo del
 |---|---|---|
 | Login y usuarios | Listo | Inicio de sesión, roles Doctora y Asistente, contraseña temporal obligatoria de cambiar, bloqueo tras 5 intentos fallidos, gestión de usuarios (solo la doctora). |
 | Pacientes | Listo | Registro por cédula ecuatoriana con consentimiento de datos, búsqueda, edición, deshabilitar y habilitar, historial de cambios (solo la doctora). |
-| Pagos | Listo | Transferencias con captura (validar o rechazar), efectivo en el consultorio, anulación, detección de capturas repetidas, cuenta bancaria y precio sugerido (los define la doctora). Por ahora cada pago se asocia al paciente; cuando exista Citas se asociará también a la cita. |
-| Citas, WhatsApp, Historia clínica | Pendiente | Citas aparece como "Próximamente" en el panel. |
+| Pagos | Listo | Transferencias con captura (validar o rechazar), efectivo en el consultorio, anulación, detección de capturas repetidas, cuenta bancaria y precio sugerido (los define la doctora). Un pago puede asociarse a una cita. |
+| Citas y agenda | Listo | Solicitud de cita en línea (con captcha y consentimiento), cola de llamadas, confirmación, reprogramación, cancelación, agenda diaria y semanal, horario de atención y bloqueos (los define la doctora), historial de cada cita. |
+| WhatsApp, Historia clínica | Pendiente | |
 
 Direcciones (con la app corriendo):
 
 | Página | Dirección |
 |---|---|
 | Página pública | https://localhost:7111/ |
+| Solicitar cita (pública) | https://localhost:7111/citas/solicitar |
+| Política de privacidad (pública) | https://localhost:7111/privacidad |
 | Panel del personal | https://localhost:7111/admin |
+| Agenda | https://localhost:7111/admin/agenda |
+| Cola de citas | https://localhost:7111/admin/citas |
+| Configuración de la agenda (solo doctora) | https://localhost:7111/admin/agenda/configuracion |
 | Pacientes | https://localhost:7111/admin/pacientes |
 | Pagos | https://localhost:7111/admin/pagos |
 | Configuración de pagos (solo doctora) | https://localhost:7111/admin/pagos/configuracion |
@@ -216,8 +222,14 @@ Cuando descargues cambios nuevos del repositorio (`git pull`), no hace falta nad
 1. **Doctora**: en **Usuarios**, pulsa **Nuevo usuario** para crear la cuenta de la asistente. El sistema genera una contraseña temporal que se muestra **una sola vez**: entrégala en persona.
 2. **Asistente**: inicia sesión con esa contraseña temporal y crea la suya.
 3. **Pacientes**: en **Pacientes**, pulsa **Nuevo paciente**, completa los datos y marca la casilla de consentimiento (es obligatoria por la LOPDP).
-4. **Doctora**: en **Pagos → Configuración**, registra el precio sugerido de la consulta y la cuenta bancaria para transferencias.
-5. **Pagos**: en **Pagos** (o desde la ficha del paciente), pulsa **Registrar pago**.
+4. **Doctora**: en **Agenda → Configuración**, define la duración de las citas, la anticipación mínima y máxima, el horario de atención de cada día (franjas) y, si quieres recibir solicitudes en línea, activa **Los pacientes pueden pedir cita desde la página web**. Ahí mismo se bloquean vacaciones o feriados.
+5. **Doctora**: en **Pagos → Configuración**, registra el precio sugerido de la consulta y la cuenta bancaria para transferencias.
+6. **Citas**: el ciclo de una cita es:
+   - **Desde la web**: el paciente elige día y hora en `/citas/solicitar`, deja sus datos y acepta la política de privacidad. La solicitud queda **Pendiente** y el horario reservado por las horas configuradas (nunca más allá de la hora de la cita). Si nadie la atiende a tiempo, el sistema la cancela solo y libera el horario.
+   - **En Citas** (cola de trabajo): **Nuevas** → **Pasar a la cola de llamadas** → llamar al paciente → **Confirmar** o **No contestó** (se puede volver a intentar). Si la cédula ya existía, la ficha del paciente **no** cambia: lo que escribió en la web se muestra aparte para compararlo al llamar.
+   - **Desde el panel** (por teléfono o en persona): en **Agenda**, pulsa **Agendar** en un horario libre (o **Agendar cita**); la cita queda **Confirmada**. También desde la ficha del paciente.
+   - En la ficha de la cita: **Reprogramar** (elige otro horario libre; queda Reprogramada hasta que el paciente confirme), **Cancelar** (con motivo) y, desde la hora de la cita, **Marcar atendida** o **Marcar no asistió**.
+7. **Pagos**: en **Pagos**, desde la ficha del paciente o desde la ficha de la cita, pulsa **Registrar pago**.
    - **Transferencia**: adjunta la captura que envió el paciente (JPG, PNG o PDF, máximo 5 MB). Queda "Por validar" hasta que alguien confirme que el dinero llegó a la cuenta y pulse **Validar** (o **Rechazar**, con motivo).
    - **Efectivo**: queda "Por cobrar" hasta que el paciente pague en el consultorio y se pulse **Marcar como pagado**.
    - Un pago pendiente registrado por error se **anula** (con motivo); nunca se borra.
@@ -229,12 +241,14 @@ Qué puede hacer cada rol:
 | Registrar, buscar y editar pacientes | Sí | Sí |
 | Deshabilitar y habilitar pacientes | Sí | Sí |
 | Registrar pagos, validar o rechazar transferencias, cobrar efectivo, anular | Sí | Sí |
+| Agendar, confirmar, reprogramar y cancelar citas; atender la cola | Sí | Sí |
+| Configurar la agenda (duración, horario de atención, bloqueos, solicitudes web) | Sí | No |
 | Ver la cuenta bancaria (para enviarla a los pacientes) | Sí | Sí |
 | Cambiar el precio sugerido y la cuenta bancaria | Sí | No |
 | Ver el historial de cambios de pacientes y pagos | Sí | No |
 | Crear usuarios, cambiar roles, restablecer contraseñas | Sí | No |
 
-Un paciente **deshabilitado** no aparece en las búsquedas, conserva todos sus datos y no se puede editar ni recibir pagos hasta habilitarlo. Para verlo, activa **Mostrar deshabilitados** en la lista.
+Un paciente **deshabilitado** no aparece en las búsquedas, conserva todos sus datos y no se puede editar, recibir pagos ni agendar citas hasta habilitarlo. Para verlo, activa **Mostrar deshabilitados** en la lista.
 
 Sobre los montos: se pueden escribir como `35`, `35,50` o `35.50`. Un monto ambiguo como `1.234` se rechaza; escríbelo como `1234` o `1.234,00`.
 
@@ -300,7 +314,10 @@ docker exec -it consultorio-db psql -U consultorio -d consultorio
 | El navegador dice "La conexión no es privada" | El certificado de desarrollo no es de confianza. | Repite el paso 6 y reinicia el navegador. |
 | `address already in use` o el puerto 5432 está ocupado | Hay otro PostgreSQL instalado en la computadora. | Detén el otro servicio de PostgreSQL o cambia el puerto en `docker-compose.yml` y en la cadena de conexión. |
 | "Cuenta bloqueada por demasiados intentos" | 5 contraseñas incorrectas seguidas. | Espera 15 minutos, pide a la doctora que la desbloquee en Usuarios, o usa el comando de emergencia. |
-| "Demasiados intentos. Espera un minuto" | Más de 10 envíos por minuto desde la misma computadora. | Espera un minuto. |
+| "Demasiados intentos. Espera un minuto" | Más de 10 envíos de inicio de sesión por minuto, o más de 5 solicitudes de cita en 10 minutos, desde la misma conexión. | Espera unos minutos. |
+| La página pública dice "Por ahora no recibimos solicitudes de cita en línea" | La agenda no está configurada, la doctora no activó las solicitudes web, falta el texto de la política de privacidad o (fuera de desarrollo) faltan las claves de Turnstile. | Revisa **Agenda → Configuración**, `ProteccionDatos:RutaPoliticaPrivacidad` y la sección `Turnstile`. |
+| "La agenda aún no está configurada" | La doctora todavía no guardó la configuración de la agenda. | **Agenda → Configuración**. |
+| "Hay N cita(s) activa(s) en ese período" al bloquear | No se bloquea encima de citas activas. | Reprográmalas o cancélalas y vuelve a bloquear. |
 | "La captura debe ser una imagen JPG o PNG, o un PDF" | El archivo no es realmente una imagen o un PDF (aunque su nombre termine en .png). | Pide al paciente una captura de pantalla o el PDF que entrega el banco. |
 | "Esta captura ya se registró el ..." | Esa misma captura ya está en otro pago vigente. | Revisa el pago indicado; si fue un error, anúlalo y vuelve a registrar. |
 | `Configura 'Archivos:RutaBase'` | Falta la carpeta donde se guardan las capturas. | Revisa `src/Consultorio.Web/appsettings.json`. |
@@ -319,9 +336,19 @@ Se define en `src/Consultorio.Web/appsettings.json`; en producción se puede sob
 | `UsuarioInicial:*` | Cuenta inicial de la doctora; solo se usa si todavía no existe ninguna. **Nunca en el repositorio.** |
 | `ConnectionStrings:Default` | Conexión a PostgreSQL. **Nunca en el repositorio.** |
 | `DataProtection:RutaClaves` | Carpeta donde se guardan las claves que cifran las sesiones (necesaria en producción con Docker). |
+| `ProteccionDatos:RutaPoliticaPrivacidad` | Archivo de texto con la política de privacidad que se muestra en `/privacidad` (relativo a `src/Consultorio.Web` o ruta completa). En desarrollo apunta a la plantilla `Contenido/politica-privacidad.plantilla.txt`. Sin este archivo no se reciben solicitudes en línea. Formato: `## ` para títulos, `- ` para listas, línea en blanco entre párrafos. |
+| `Turnstile:ClaveSitio` y `Turnstile:ClaveSecreta` | Captcha de Cloudflare Turnstile del formulario público. En desarrollo se usan las claves de prueba públicas de Cloudflare (siempre aprueban). En producción, la clave secreta va **solo** en la variable de entorno `Turnstile__ClaveSecreta`. Fuera de desarrollo, sin claves no se reciben solicitudes en línea. |
 | `Archivos:RutaBase` | Carpeta de las capturas de pago (por defecto `almacen`, dentro de `src/Consultorio.Web`). Está **fuera de `wwwroot`**: solo se pueden ver con sesión iniciada. Contiene datos personales: no se sube a GitHub y debe incluirse en los respaldos. |
 
 Si falta una clave obligatoria, la aplicación no arranca y el mensaje indica cuál es.
+
+**Antes de abrir las solicitudes en línea al público** (lo debe proporcionar la doctora):
+
+1. Las claves reales de Cloudflare Turnstile (cuenta gratuita en https://dash.cloudflare.com, sección Turnstile, con el dominio del consultorio).
+2. El texto final de la política de privacidad, revisado a partir de la plantilla, y la versión correspondiente en `ProteccionDatos:VersionPoliticaPrivacidad`.
+3. La configuración de la agenda (duración, horario de atención, reserva y límites) desde el panel.
+
+Al publicar detrás de Caddy, habrá que configurar las cabeceras reenviadas (`X-Forwarded-For`) para que el límite de envíos se aplique a la IP real de cada visitante y no a la del proxy; se hará en el módulo de despliegue.
 
 ---
 
@@ -338,8 +365,9 @@ src/
   Consultorio.Domain/            Entidades y reglas de negocio (sin dependencias)
   Consultorio.Application/       Casos de uso, puertos (interfaces) y validadores
   Consultorio.Infrastructure/    EF Core + PostgreSQL, Identity, auditoría, migraciones
-  Consultorio.Web/               Blazor: página pública, /cuenta y panel /admin
+  Consultorio.Web/               Blazor: página pública, /citas/solicitar, /cuenta y panel /admin
+    Contenido/                   Plantilla de la política de privacidad
 tests/
-  Consultorio.Domain.Tests/      Reglas del dominio (cédula, teléfono, paciente)
+  Consultorio.Domain.Tests/      Reglas del dominio (cédula, teléfono, paciente, pagos, citas y disponibilidad)
   Consultorio.Application.Tests/ Casos de uso y validadores
 ```

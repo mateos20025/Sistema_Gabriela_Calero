@@ -1,3 +1,4 @@
+using Consultorio.Domain.Citas;
 using Consultorio.Domain.Pacientes;
 using Consultorio.Domain.Pagos;
 using Consultorio.Infrastructure.Auditoria;
@@ -9,8 +10,8 @@ using Microsoft.EntityFrameworkCore;
 namespace Consultorio.Infrastructure.Persistencia;
 
 /// <summary>
-/// Única base de datos del sistema: tablas de Identity (usuarios, roles...), pacientes, auditoría y,
-/// en los próximos módulos, citas y pagos.
+/// Única base de datos del sistema: tablas de Identity (usuarios, roles...), pacientes, citas, agenda,
+/// pagos y auditoría.
 /// </summary>
 public sealed class ConsultorioDbContext(DbContextOptions<ConsultorioDbContext> options)
     : IdentityDbContext<Usuario, IdentityRole<Guid>, Guid>(options)
@@ -20,6 +21,16 @@ public sealed class ConsultorioDbContext(DbContextOptions<ConsultorioDbContext> 
     public DbSet<Pago> Pagos => Set<Pago>();
 
     public DbSet<ConfiguracionPagos> ConfiguracionPagos => Set<ConfiguracionPagos>();
+
+    public DbSet<Cita> Citas => Set<Cita>();
+
+    public DbSet<HistorialCita> HistorialCitas => Set<HistorialCita>();
+
+    public DbSet<ConfiguracionAgenda> ConfiguracionAgenda => Set<ConfiguracionAgenda>();
+
+    public DbSet<FranjaAtencion> FranjasAtencion => Set<FranjaAtencion>();
+
+    public DbSet<BloqueoAgenda> BloqueosAgenda => Set<BloqueoAgenda>();
 
     public DbSet<RegistroAuditoria> Auditoria => Set<RegistroAuditoria>();
 

@@ -1,0 +1,44 @@
+## PLANTILLA: este texto debe ser revisado y completado por la doctora (y, de preferencia, por un abogado) antes de publicarse
+
+Reemplace todo lo que está entre corchetes. En producción, guarde el texto final en otro archivo y configure su ubicación en ProteccionDatos__RutaPoliticaPrivacidad. Cada vez que cambie el contenido, suba también ProteccionDatos__VersionPoliticaPrivacidad.
+
+## Responsable del tratamiento
+
+[Nombre completo de la doctora], con cédula o RUC [número], con consultorio en [dirección], es responsable del tratamiento de los datos personales que usted entrega a través de este sitio y en el consultorio. Contacto: [correo electrónico] y [teléfono].
+
+## Datos que recopilamos
+
+- Cédula de identidad, nombres y apellidos.
+- Número de teléfono y, si usted lo proporciona, correo electrónico.
+- Fecha y hora de las citas que solicita o agenda.
+- Información de pagos asociada a sus atenciones.
+
+Al solicitar una cita en línea no le pedimos datos de salud. La información clínica se registra únicamente durante la atención, en la historia clínica, con las medidas de seguridad que exige la ley.
+
+## Finalidad
+
+Usamos sus datos para identificarle, agendar, confirmar, reprogramar o cancelar sus citas, comunicarnos con usted sobre ellas y registrar los pagos correspondientes. No usamos sus datos con fines publicitarios ni los vendemos.
+
+## Base legal
+
+El tratamiento se basa en su consentimiento, que usted otorga al marcar la casilla de aceptación, y en la relación de atención médica que usted solicita, conforme a la Ley Orgánica de Protección de Datos Personales del Ecuador.
+
+## Conservación
+
+Conservamos sus datos mientras exista la relación de atención y durante los plazos que exige la normativa sanitaria aplicable. [Indique el plazo concreto de conservación.]
+
+## Con quién compartimos sus datos
+
+No compartimos sus datos con terceros, salvo obligación legal o a los proveedores que nos prestan servicios de alojamiento y verificación anti-robots del formulario, quienes actúan bajo nuestras instrucciones. [Indique los proveedores, por ejemplo el servicio de alojamiento del sistema.]
+
+## Sus derechos
+
+Usted puede solicitar el acceso, rectificación, actualización, eliminación, oposición, portabilidad y suspensión del tratamiento de sus datos, así como revocar su consentimiento, escribiendo a [correo electrónico] o acercándose al consultorio. Responderemos en los plazos que establece la ley. También puede presentar un reclamo ante la Autoridad de Protección de Datos Personales.
+
+## Seguridad
+
+Aplicamos medidas técnicas y organizativas para proteger sus datos: acceso con usuario y contraseña solo para el personal autorizado, conexiones cifradas, registro de cambios y copias de seguridad.
+
+## Cambios a esta política
+
+Si modificamos esta política, publicaremos la nueva versión en esta página. Versión [número de versión], vigente desde [fecha].

@@ -1,5 +1,7 @@
 using System.Globalization;
+using Consultorio.Application.Citas;
 using Consultorio.Application.Comun;
+using Consultorio.Domain.Citas;
 using Consultorio.Domain.Pacientes;
 using Consultorio.Domain.Pagos;
 using MudBlazor;
@@ -19,6 +21,23 @@ public static class Formato
 
     public static string Fecha(DateTime fechaUtc) =>
         HoraEcuador.DesdeUtc(fechaUtc).ToString("dd/MM/yyyy", CulturaEcuador);
+
+    /// <summary>"09:30" en hora de Ecuador.</summary>
+    public static string Hora(DateTime fechaUtc) => HoraEcuador.DesdeUtc(fechaUtc).ToString("HH:mm", CulturaEcuador);
+
+    /// <summary>"lunes 19 de octubre de 2026".</summary>
+    public static string FechaLarga(DateOnly fecha) => fecha.ToString("dddd d 'de' MMMM 'de' yyyy", CulturaEcuador);
+
+    /// <summary>"lun 19/10".</summary>
+    public static string FechaCorta(DateOnly fecha) => fecha.ToString("ddd dd/MM", CulturaEcuador);
+
+    /// <summary>"lunes 19 de octubre de 2026, 09:30" en hora de Ecuador.</summary>
+    public static string FechaHoraLarga(DateTime fechaUtc) =>
+        $"{FechaLarga(DateOnly.FromDateTime(HoraEcuador.DesdeUtc(fechaUtc)))}, {Hora(fechaUtc)}";
+
+    public static string DiaSemana(DayOfWeek dia) => CulturaEcuador.DateTimeFormat.GetDayName(dia);
+
+    public static string HoraDelDia(TimeOnly hora) => hora.ToString("HH:mm", CulturaEcuador);
 
     public static string Telefono(string telefonoE164) => TelefonoEcuatoriano.Formatear(telefonoE164);
 
@@ -53,6 +72,39 @@ public static class Formato
         EstadoPago.Validado or EstadoPago.PagadoEnConsultorio => Color.Success,
         EstadoPago.Rechazado => Color.Error,
         _ => Color.Default,
+    };
+
+    public static string Estado(EstadoCita estado) => NombresEstadoCita.De(estado);
+
+    public static Color ColorEstado(EstadoCita estado) => estado switch
+    {
+        EstadoCita.Pendiente => Color.Warning,
+        EstadoCita.EnCola => Color.Info,
+        EstadoCita.NoContesta => Color.Secondary,
+        EstadoCita.Confirmada => Color.Success,
+        EstadoCita.Reprogramada => Color.Primary,
+        EstadoCita.Atendida => Color.Dark,
+        EstadoCita.Cancelada or EstadoCita.NoAsistio => Color.Error,
+        _ => Color.Default,
+    };
+
+    /// <summary>Texto del botón que lleva la cita a ese estado.</summary>
+    public static string AccionHacia(EstadoCita estado) => estado switch
+    {
+        EstadoCita.EnCola => "Pasar a la cola de llamadas",
+        EstadoCita.Confirmada => "Confirmar",
+        EstadoCita.NoContesta => "No contestó",
+        EstadoCita.Cancelada => "Cancelar cita",
+        EstadoCita.Atendida => "Marcar atendida",
+        EstadoCita.NoAsistio => "Marcar no asistió",
+        _ => Estado(estado),
+    };
+
+    public static string Origen(OrigenRegistro origen) => origen switch
+    {
+        OrigenRegistro.Web => "Página web",
+        OrigenRegistro.Panel => "Panel",
+        _ => origen.ToString(),
     };
 
     public static string Metodo(MetodoPago metodo) => metodo switch

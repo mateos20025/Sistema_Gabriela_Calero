@@ -6,6 +6,7 @@ using Consultorio.Infrastructure.Persistencia;
 using Consultorio.Web.Components;
 using Consultorio.Web.Configuracion;
 using Consultorio.Web.Seguridad;
+using Consultorio.Web.Tareas;
 using MudBlazor.Services;
 using Serilog;
 
@@ -39,9 +40,15 @@ try
         .ValidateDataAnnotations()
         .ValidateOnStart();
 
+    builder.Services.Configure<OpcionesPoliticaPrivacidad>(builder.Configuration.GetSection(OpcionesPoliticaPrivacidad.Seccion));
+    builder.Services.AddSingleton<PoliticaPrivacidad>();
+
     builder.Services.AddAplicacion();
     builder.Services.AddInfraestructura(builder.Configuration);
     builder.Services.AddSeguridadWeb(builder.Configuration);
+
+    // Libera cada minuto las solicitudes web cuya reserva venció.
+    builder.Services.AddHostedService<ExpiradorReservasCitas>();
 
     var app = builder.Build();
 

@@ -15,6 +15,7 @@ public enum AccionAuditoria
     Modificado = 2,
     Deshabilitado = 3,
     Habilitado = 4,
+    Eliminado = 5,
 }
 
 /// <summary>

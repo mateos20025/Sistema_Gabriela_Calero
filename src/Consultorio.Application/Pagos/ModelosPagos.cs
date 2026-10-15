@@ -43,6 +43,8 @@ public sealed record PagoDetalle(
     Guid PacienteId,
     string PacienteNombre,
     string PacienteCedula,
+    Guid? CitaId,
+    DateTime? CitaInicioUtc,
     MetodoPago Metodo,
     EstadoPago Estado,
     decimal Monto,
@@ -98,6 +100,7 @@ public static class MensajesPagos
     public const string NoExiste = "El pago no existe.";
     public const string PacienteNoExiste = "El paciente no existe.";
     public const string PacienteDeshabilitado = "El paciente está deshabilitado. Habilítalo para registrarle pagos.";
+    public const string CitaNoCorresponde = "La cita no existe o no es de este paciente.";
     public const string ComprobanteObligatorio = "Adjunta la captura de la transferencia.";
     public const string ComprobanteMuyGrande = "La captura no puede pesar más de 5 MB.";
     public const string TipoNoPermitido = "La captura debe ser una imagen JPG o PNG, o un PDF.";

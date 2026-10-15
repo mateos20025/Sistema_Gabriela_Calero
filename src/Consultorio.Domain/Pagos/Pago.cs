@@ -23,7 +23,7 @@ public sealed class Pago
 
     public Guid PacienteId { get; private set; }
 
-    /// <summary>Cita a la que corresponde. Vacío hasta que exista el módulo de Citas.</summary>
+    /// <summary>Cita a la que corresponde (opcional: un pago puede registrarse solo para el paciente).</summary>
     public Guid? CitaId { get; private set; }
 
     public MetodoPago Metodo { get; private set; }
@@ -69,11 +69,12 @@ public sealed class Pago
         string concepto,
         string? numeroComprobante,
         ComprobanteTransferencia comprobante,
-        Guid registradoPorId)
+        Guid registradoPorId,
+        Guid? citaId = null)
     {
         ArgumentNullException.ThrowIfNull(comprobante);
 
-        var pago = Nuevo(pacienteId, MetodoPago.Transferencia, EstadoPago.PendienteValidacion, monto, concepto, registradoPorId);
+        var pago = Nuevo(pacienteId, MetodoPago.Transferencia, EstadoPago.PendienteValidacion, monto, concepto, registradoPorId, citaId);
         pago.NumeroComprobante = NormalizarNumeroComprobante(numeroComprobante);
         pago.ComprobanteArchivoId = comprobante.ArchivoId;
         pago.ComprobanteTipo = comprobante.Tipo;
@@ -82,8 +83,8 @@ public sealed class Pago
         return pago;
     }
 
-    public static Pago RegistrarEfectivo(Guid pacienteId, decimal monto, string concepto, Guid registradoPorId) =>
-        Nuevo(pacienteId, MetodoPago.Efectivo, EstadoPago.PendienteEnConsultorio, monto, concepto, registradoPorId);
+    public static Pago RegistrarEfectivo(Guid pacienteId, decimal monto, string concepto, Guid registradoPorId, Guid? citaId = null) =>
+        Nuevo(pacienteId, MetodoPago.Efectivo, EstadoPago.PendienteEnConsultorio, monto, concepto, registradoPorId, citaId);
 
     public void Validar(Guid usuarioId, DateTime ahoraUtc)
     {
@@ -124,7 +125,8 @@ public sealed class Pago
         string.IsNullOrWhiteSpace(numero)
         || (numero.Trim().Length <= LongitudMaximaNumeroComprobante && numero.Trim().All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or ' '));
 
-    private static Pago Nuevo(Guid pacienteId, MetodoPago metodo, EstadoPago estado, decimal monto, string concepto, Guid registradoPorId)
+    private static Pago Nuevo(
+        Guid pacienteId, MetodoPago metodo, EstadoPago estado, decimal monto, string concepto, Guid registradoPorId, Guid? citaId)
     {
         if (pacienteId == Guid.Empty)
         {
@@ -150,6 +152,7 @@ public sealed class Pago
         {
             Id = Guid.CreateVersion7(),
             PacienteId = pacienteId,
+            CitaId = citaId == Guid.Empty ? null : citaId,
             Metodo = metodo,
             Estado = estado,
             Monto = monto,

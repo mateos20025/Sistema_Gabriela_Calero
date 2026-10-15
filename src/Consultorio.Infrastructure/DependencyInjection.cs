@@ -1,5 +1,6 @@
 using Consultorio.Application.Abstracciones;
 using Consultorio.Application.Auditoria;
+using Consultorio.Application.Citas;
 using Consultorio.Application.Comun;
 using Consultorio.Application.Cuenta;
 using Consultorio.Application.Pacientes;
@@ -8,6 +9,7 @@ using Consultorio.Application.Usuarios;
 using Consultorio.Domain.Pacientes;
 using Consultorio.Infrastructure.Archivos;
 using Consultorio.Infrastructure.Auditoria;
+using Consultorio.Infrastructure.Citas;
 using Consultorio.Infrastructure.Comun;
 using Consultorio.Infrastructure.Identidad;
 using Consultorio.Infrastructure.Pacientes;
@@ -76,6 +78,11 @@ public static class DependencyInjection
         services.AddScoped<IConsultaAuditoria, ConsultaAuditoria>();
         services.AddScoped<IRepositorioPagos, RepositorioPagos>();
         services.AddScoped<IRepositorioConfiguracionPagos, RepositorioConfiguracionPagos>();
+        services.AddScoped<IRepositorioCitas, RepositorioCitas>();
+        services.AddScoped<IRepositorioAgenda, RepositorioAgenda>();
+
+        services.AddSingleton(LeerOpcionesTurnstile(configuration));
+        services.AddHttpClient<IVerificadorHumano, VerificadorTurnstile>(cliente => cliente.Timeout = TimeSpan.FromSeconds(10));
 
         services.AddSingleton(LeerOpcionesArchivos(configuration));
         services.AddSingleton<IAlmacenArchivos, AlmacenArchivosDisco>();
@@ -100,6 +107,25 @@ public static class DependencyInjection
         }
 
         return new OpcionesProteccionDatos { VersionPoliticaPrivacidad = version };
+    }
+
+    /// <summary>
+    /// Lee la sección "Turnstile" (captcha del formulario público). Sin claves el captcha queda deshabilitado;
+    /// con solo una de las dos la app no arranca, porque es un error de configuración.
+    /// </summary>
+    private static OpcionesTurnstile LeerOpcionesTurnstile(IConfiguration configuration)
+    {
+        var opciones = configuration.GetSection(OpcionesTurnstile.Seccion).Get<OpcionesTurnstile>() ?? new OpcionesTurnstile();
+        var tieneSitio = !string.IsNullOrWhiteSpace(opciones.ClaveSitio);
+        var tieneSecreta = !string.IsNullOrWhiteSpace(opciones.ClaveSecreta);
+
+        if (tieneSitio != tieneSecreta)
+        {
+            throw new InvalidOperationException(
+                $"Configura las dos claves de '{OpcionesTurnstile.Seccion}' (ClaveSitio y ClaveSecreta) o ninguna.");
+        }
+
+        return new OpcionesTurnstile { ClaveSitio = opciones.ClaveSitio?.Trim(), ClaveSecreta = opciones.ClaveSecreta?.Trim() };
     }
 
     /// <summary>Lee la sección "Archivos". Sin ella no se sabría dónde guardar las capturas de pago.</summary>

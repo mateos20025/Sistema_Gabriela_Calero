@@ -1,0 +1,71 @@
+@page "/privacidad"
+@inject PoliticaPrivacidad Politica
+
+<Titulo Texto="Política de privacidad" />
+
+<MudPaper Elevation="1" Class="pa-6 pa-sm-8">
+    <MudText Typo="Typo.h4" HtmlTag="h1" Class="mb-4">Política de privacidad</MudText>
+
+    @if (bloques is null)
+    {
+        <MudAlert Severity="Severity.Info">
+            La política de privacidad no está disponible en este momento. Comunícate con el consultorio para conocerla.
+        </MudAlert>
+    }
+    else
+    {
+        @foreach (var grupo in Agrupar(bloques))
+        {
+            @if (grupo[0].Tipo == TipoBloquePolitica.ElementoLista)
+            {
+                <ul class="politica-lista">
+                    @foreach (var elemento in grupo)
+                    {
+                        <li>@elemento.Texto</li>
+                    }
+                </ul>
+            }
+            else if (grupo[0].Tipo == TipoBloquePolitica.Titulo)
+            {
+                <MudText Typo="Typo.h6" HtmlTag="h2" Class="mt-4 mb-2">@grupo[0].Texto</MudText>
+            }
+            else
+            {
+                <MudText Class="mb-3">@grupo[0].Texto</MudText>
+            }
+        }
+    }
+</MudPaper>
+
+@code {
+    private IReadOnlyList<BloquePolitica>? bloques;
+
+    protected override async Task OnInitializedAsync() => bloques = await Politica.LeerAsync(CancellationToken.None);
+
+    /// <summary>Junta los elementos de lista seguidos en un solo grupo (una lista HTML).</summary>
+    private static IEnumerable<List<BloquePolitica>> Agrupar(IReadOnlyList<BloquePolitica> lista)
+    {
+        List<BloquePolitica>? elementos = null;
+        foreach (var bloque in lista)
+        {
+            if (bloque.Tipo == TipoBloquePolitica.ElementoLista)
+            {
+                (elementos ??= []).Add(bloque);
+                continue;
+            }
+
+            if (elementos is not null)
+            {
+                yield return elementos;
+                elementos = null;
+            }
+
+            yield return [bloque];
+        }
+
+        if (elementos is not null)
+        {
+            yield return elementos;
+        }
+    }
+}

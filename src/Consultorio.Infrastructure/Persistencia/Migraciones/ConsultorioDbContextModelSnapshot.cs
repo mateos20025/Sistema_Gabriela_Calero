@@ -22,6 +22,282 @@ namespace Consultorio.Infrastructure.Persistencia.Migraciones
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Consultorio.Domain.Citas.BloqueoAgenda", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("ActualizadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("actualizado_en");
+
+                    b.Property<DateTime>("CreadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("creado_en");
+
+                    b.Property<DateTime>("Fin")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fin");
+
+                    b.Property<DateTime>("Inicio")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("inicio");
+
+                    b.Property<string>("Motivo")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("motivo");
+
+                    b.HasKey("Id")
+                        .HasName("pk_bloqueos_agenda");
+
+                    b.HasIndex("Inicio", "Fin")
+                        .HasDatabaseName("ix_bloqueos_agenda_inicio_fin");
+
+                    b.ToTable("bloqueos_agenda", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_bloqueos_agenda_fin_despues_de_inicio", "fin > inicio");
+                        });
+                });
+
+            modelBuilder.Entity("Consultorio.Domain.Citas.Cita", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("ActualizadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("actualizado_en");
+
+                    b.Property<string>("ContactoCorreo")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("contacto_correo");
+
+                    b.Property<string>("ContactoNombre")
+                        .HasMaxLength(201)
+                        .HasColumnType("character varying(201)")
+                        .HasColumnName("contacto_nombre");
+
+                    b.Property<string>("ContactoTelefono")
+                        .HasMaxLength(13)
+                        .HasColumnType("character varying(13)")
+                        .HasColumnName("contacto_telefono");
+
+                    b.Property<DateTime>("CreadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("creado_en");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("estado");
+
+                    b.Property<DateTime>("Fin")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fin");
+
+                    b.Property<DateTime>("Inicio")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("inicio");
+
+                    b.Property<string>("Origen")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("origen");
+
+                    b.Property<Guid>("PacienteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("paciente_id");
+
+                    b.Property<DateTime?>("ReservaExpiraEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("reserva_expira_en");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_citas");
+
+                    b.HasIndex("Inicio")
+                        .HasDatabaseName("ix_citas_inicio");
+
+                    b.HasIndex("Estado", "Inicio")
+                        .HasDatabaseName("ix_citas_estado_inicio");
+
+                    b.HasIndex("PacienteId", "Inicio")
+                        .HasDatabaseName("ix_citas_paciente_id_inicio");
+
+                    b.ToTable("citas", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_citas_fin_despues_de_inicio", "fin > inicio");
+
+                            t.HasCheckConstraint("ck_citas_reserva_solo_pendiente", "reserva_expira_en IS NULL OR estado = 'Pendiente'");
+                        });
+                });
+
+            modelBuilder.Entity("Consultorio.Domain.Citas.ConfiguracionAgenda", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("ActualizadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("actualizado_en");
+
+                    b.Property<int>("AnticipacionMaximaDias")
+                        .HasColumnType("integer")
+                        .HasColumnName("anticipacion_maxima_dias");
+
+                    b.Property<int>("AnticipacionMinimaHoras")
+                        .HasColumnType("integer")
+                        .HasColumnName("anticipacion_minima_horas");
+
+                    b.Property<DateTime>("CreadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("creado_en");
+
+                    b.Property<int>("DuracionCitaMinutos")
+                        .HasColumnType("integer")
+                        .HasColumnName("duracion_cita_minutos");
+
+                    b.Property<int>("HorasReservaSolicitud")
+                        .HasColumnType("integer")
+                        .HasColumnName("horas_reserva_solicitud");
+
+                    b.Property<int>("MaximoSolicitudesActivasPorCedula")
+                        .HasColumnType("integer")
+                        .HasColumnName("maximo_solicitudes_activas_por_cedula");
+
+                    b.Property<bool>("SolicitudesWebHabilitadas")
+                        .HasColumnType("boolean")
+                        .HasColumnName("solicitudes_web_habilitadas");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_configuracion_agenda");
+
+                    b.ToTable("configuracion_agenda", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_configuracion_agenda_anticipacion", "anticipacion_minima_horas BETWEEN 0 AND 168 AND anticipacion_maxima_dias BETWEEN 1 AND 365");
+
+                            t.HasCheckConstraint("ck_configuracion_agenda_duracion", "duracion_cita_minutos BETWEEN 10 AND 240");
+                        });
+                });
+
+            modelBuilder.Entity("Consultorio.Domain.Citas.FranjaAtencion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("ActualizadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("actualizado_en");
+
+                    b.Property<DateTime>("CreadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("creado_en");
+
+                    b.Property<string>("DiaSemana")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("dia_semana");
+
+                    b.Property<TimeOnly>("Fin")
+                        .HasColumnType("time without time zone")
+                        .HasColumnName("fin");
+
+                    b.Property<TimeOnly>("Inicio")
+                        .HasColumnType("time without time zone")
+                        .HasColumnName("inicio");
+
+                    b.HasKey("Id")
+                        .HasName("pk_franjas_atencion");
+
+                    b.HasIndex("DiaSemana")
+                        .HasDatabaseName("ix_franjas_atencion_dia_semana");
+
+                    b.ToTable("franjas_atencion", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_franjas_atencion_fin_despues_de_inicio", "fin > inicio");
+                        });
+                });
+
+            modelBuilder.Entity("Consultorio.Domain.Citas.HistorialCita", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("ActualizadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("actualizado_en");
+
+                    b.Property<Guid>("CitaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("cita_id");
+
+                    b.Property<DateTime>("CreadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("creado_en");
+
+                    b.Property<string>("EstadoAnterior")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("estado_anterior");
+
+                    b.Property<string>("EstadoNuevo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("estado_nuevo");
+
+                    b.Property<DateTime?>("InicioAnterior")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("inicio_anterior");
+
+                    b.Property<DateTime?>("InicioNuevo")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("inicio_nuevo");
+
+                    b.Property<string>("Observacion")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("observacion");
+
+                    b.Property<Guid?>("UsuarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_historial_cita");
+
+                    b.HasIndex("UsuarioId")
+                        .HasDatabaseName("ix_historial_cita_usuario_id");
+
+                    b.HasIndex("CitaId", "CreadoEn")
+                        .HasDatabaseName("ix_historial_cita_cita_id_creado_en");
+
+                    b.ToTable("historial_cita", (string)null);
+                });
+
             modelBuilder.Entity("Consultorio.Domain.Pacientes.Paciente", b =>
                 {
                     b.Property<Guid>("Id")
@@ -264,6 +540,9 @@ namespace Consultorio.Infrastructure.Persistencia.Migraciones
 
                     b.HasKey("Id")
                         .HasName("pk_pagos");
+
+                    b.HasIndex("CitaId")
+                        .HasDatabaseName("ix_pagos_cita_id");
 
                     b.HasIndex("ComprobanteHash")
                         .IsUnique()
@@ -663,8 +942,40 @@ namespace Consultorio.Infrastructure.Persistencia.Migraciones
                     b.ToTable("usuario_tokens", (string)null);
                 });
 
+            modelBuilder.Entity("Consultorio.Domain.Citas.Cita", b =>
+                {
+                    b.HasOne("Consultorio.Domain.Pacientes.Paciente", null)
+                        .WithMany()
+                        .HasForeignKey("PacienteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_citas_pacientes_paciente_id");
+                });
+
+            modelBuilder.Entity("Consultorio.Domain.Citas.HistorialCita", b =>
+                {
+                    b.HasOne("Consultorio.Domain.Citas.Cita", null)
+                        .WithMany()
+                        .HasForeignKey("CitaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_historial_cita_citas_cita_id");
+
+                    b.HasOne("Consultorio.Infrastructure.Identidad.Usuario", null)
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_historial_cita_usuarios_usuario_id");
+                });
+
             modelBuilder.Entity("Consultorio.Domain.Pagos.Pago", b =>
                 {
+                    b.HasOne("Consultorio.Domain.Citas.Cita", null)
+                        .WithMany()
+                        .HasForeignKey("CitaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_pagos_citas_cita_id");
+
                     b.HasOne("Consultorio.Domain.Pacientes.Paciente", null)
                         .WithMany()
                         .HasForeignKey("PacienteId")

@@ -1,4 +1,5 @@
 @page "/admin/pacientes/{Id:guid}"
+@using Consultorio.Web.Components.Admin.Citas
 @using Consultorio.Web.Components.Admin.Pagos
 @inject ObtenerPaciente Obtener
 @inject DeshabilitarPaciente Deshabilitar
@@ -114,6 +115,10 @@ else
                     <div class="dato-valor">@NombreOrigen(paciente.ConsentimientoOrigen)</div>
                 </MudCardContent>
             </MudCard>
+        </MudItem>
+
+        <MudItem xs="12">
+            <CitasDePaciente PacienteId="paciente.Id" NombrePaciente="@paciente.NombreCompleto" Habilitado="!paciente.Deshabilitado" />
         </MudItem>
 
         <MudItem xs="12">

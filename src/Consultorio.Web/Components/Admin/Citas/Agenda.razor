@@ -1,0 +1,245 @@
+@page "/admin/agenda"
+@inject ObtenerAgenda Obtener
+@inject ConsultarDisponibilidad Disponibilidad
+@inject IRelojSistema Reloj
+@inject IDialogService Dialogos
+@inject ISnackbar Snackbar
+
+<Titulo Texto="Agenda" />
+
+<MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Class="mb-4">
+    <div>
+        <MudText Typo="Typo.h4" HtmlTag="h1">Agenda</MudText>
+        <MudText Typo="Typo.body2" Class="mud-text-secondary">Citas del día o de la semana y horarios libres para agendar.</MudText>
+    </div>
+    <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap">
+        <MudButton Href="@RutasPanel.Citas" Variant="Variant.Text" StartIcon="@Icons.Material.Filled.PhoneCallback">Cola de citas</MudButton>
+        <AuthorizeView Roles="@Roles.Doctora">
+            <MudButton Href="@RutasPanel.AjustesAgenda" Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Settings">Configuración</MudButton>
+        </AuthorizeView>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.EventAvailable"
+                   OnClick="() => AgendarAsync(null)">Agendar cita</MudButton>
+    </MudStack>
+</MudStack>
+
+<MudPaper Elevation="1" Class="pa-3 mb-4">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Wrap="Wrap.Wrap">
+        <MudButtonGroup Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small">
+            <MudButton Variant="@(semana ? Variant.Outlined : Variant.Filled)" OnClick="() => CambiarVistaAsync(false)">Día</MudButton>
+            <MudButton Variant="@(semana ? Variant.Filled : Variant.Outlined)" OnClick="() => CambiarVistaAsync(true)">Semana</MudButton>
+        </MudButtonGroup>
+        <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft" OnClick="() => MoverAsync(-1)" aria-label="Anterior" />
+        <MudButton Variant="Variant.Text" OnClick="IrAHoyAsync">Hoy</MudButton>
+        <MudIconButton Icon="@Icons.Material.Filled.ChevronRight" OnClick="() => MoverAsync(1)" aria-label="Siguiente" />
+        <MudText Typo="Typo.h6" Class="ml-2">@TituloPeriodo</MudText>
+        <MudSpacer />
+        <MudDatePicker Editable="true" Label="Ir a la fecha" Date="fecha.ToDateTime(TimeOnly.MinValue)" DateChanged="IrAFechaAsync" AutoClose="true"
+                       Variant="Variant.Outlined" Margin="Margin.Dense" DateFormat="dd/MM/yyyy" Style="max-width:180px" />
+    </MudStack>
+</MudPaper>
+
+@if (vista is null)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+}
+else if (!vista.Configurada)
+{
+    <MudAlert Severity="Severity.Warning">
+        @MensajesCitas.AgendaNoConfigurada
+        <AuthorizeView Roles="@Roles.Doctora">
+            <MudLink Href="@RutasPanel.AjustesAgenda" Class="ml-1">Configurar ahora</MudLink>
+        </AuthorizeView>
+    </MudAlert>
+}
+else if (semana)
+{
+    <div class="agenda-semana">
+        @for (var i = 0; i < vista.Dias; i++)
+        {
+            var dia = vista.Desde.AddDays(i);
+            var citasDia = CitasDe(dia);
+            <MudPaper Outlined="true" Class="@($"pa-2 agenda-dia {(dia == Hoy ? "agenda-hoy" : "")}")">
+                <MudLink Typo="Typo.subtitle2" OnClick="() => AbrirDiaAsync(dia)" Class="d-block mb-1">@Formato.FechaCorta(dia)</MudLink>
+                @foreach (var bloqueo in BloqueosDe(dia))
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Default" Icon="@Icons.Material.Filled.Block" Class="ma-0 mb-1">@bloqueo.Motivo</MudChip>
+                }
+                @if (citasDia.Count == 0)
+                {
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Sin citas</MudText>
+                }
+                @foreach (var cita in citasDia)
+                {
+                    <a href="@RutasPanel.Cita(cita.Id)" class="agenda-cita">
+                        <strong>@Formato.Hora(cita.InicioUtc)</strong> @cita.PacienteNombre
+                        <span class="d-block"><ChipEstadoCita Estado="cita.Estado" /></span>
+                    </a>
+                }
+            </MudPaper>
+        }
+    </div>
+}
+else
+{
+    @foreach (var bloqueo in BloqueosDe(fecha))
+    {
+        <MudAlert Severity="Severity.Info" Icon="@Icons.Material.Filled.Block" Class="mb-3">
+            Bloqueado de @Formato.FechaHora(bloqueo.InicioUtc) a @Formato.FechaHora(bloqueo.FinUtc): @bloqueo.Motivo
+        </MudAlert>
+    }
+
+    <MudText Typo="Typo.body2" Class="mb-2 mud-text-secondary">
+        Horario de atención: @(FranjasDe(fecha) is { Length: > 0 } franjas ? string.Join(", ", franjas) : "no se atiende este día")
+    </MudText>
+
+    <MudPaper Elevation="1">
+        <MudSimpleTable Dense="true" Hover="true" Elevation="0">
+            <thead><tr><th style="width:90px">Hora</th><th>Paciente</th><th>Teléfono</th><th>Estado</th></tr></thead>
+            <tbody>
+                @if (filasDia.Count == 0)
+                {
+                    <tr><td colspan="4" class="mud-text-secondary">No hay citas ni horarios libres este día.</td></tr>
+                }
+                @foreach (var fila in filasDia)
+                {
+                    @if (fila.Cita is { } cita)
+                    {
+                        <tr>
+                            <td><MudLink Href="@RutasPanel.Cita(cita.Id)"><strong>@Formato.Hora(cita.InicioUtc)</strong></MudLink></td>
+                            <td><MudLink Href="@RutasPanel.Cita(cita.Id)">@cita.PacienteNombre</MudLink></td>
+                            <td><MudLink Href="@($"tel:{cita.TelefonoParaLlamar}")">@Formato.Telefono(cita.TelefonoParaLlamar)</MudLink></td>
+                            <td><ChipEstadoCita Estado="cita.Estado" /></td>
+                        </tr>
+                    }
+                    else
+                    {
+                        <tr class="agenda-libre">
+                            <td>@Formato.Hora(fila.Inicio)</td>
+                            <td colspan="2" class="mud-text-secondary">Libre</td>
+                            <td><MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary" OnClick="() => AgendarAsync(fila.Inicio)">Agendar</MudButton></td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </MudSimpleTable>
+    </MudPaper>
+}
+
+@code {
+    /// <summary>Fila de la vista de día: una cita o un horario libre.</summary>
+    private sealed record FilaDia(DateTime Inicio, CitaResumen? Cita);
+
+    [SupplyParameterFromQuery(Name = "fecha")]
+    private string? FechaConsulta { get; set; }
+
+    private DateOnly fecha;
+    private bool semana;
+    private AgendaVista? vista;
+    private List<FilaDia> filasDia = [];
+
+    private DateOnly Hoy => CalculadoraDisponibilidad.FechaEcuador(Reloj.AhoraUtc);
+
+    private DateOnly LunesDeLaSemana => fecha.AddDays(-(((int)fecha.DayOfWeek + 6) % 7));
+
+    private string TituloPeriodo => semana
+        ? $"Semana del {Formato.FechaCorta(LunesDeLaSemana)} al {Formato.FechaCorta(LunesDeLaSemana.AddDays(6))}"
+        : Formato.FechaLarga(fecha);
+
+    protected override Task OnParametersSetAsync()
+    {
+        fecha = DateOnly.TryParseExact(FechaConsulta, "yyyy-MM-dd", out var pedida) ? pedida : Hoy;
+        return CargarAsync();
+    }
+
+    private async Task CargarAsync()
+    {
+        vista = null;
+        filasDia = [];
+
+        if (semana)
+        {
+            vista = await Obtener.EjecutarAsync(LunesDeLaSemana, 7, CancellationToken.None);
+            return;
+        }
+
+        vista = await Obtener.EjecutarAsync(fecha, 1, CancellationToken.None);
+        var libres = (await Disponibilidad.EjecutarAsync(fecha, 1, null, CancellationToken.None))?.SingleOrDefault()?.Horarios ?? [];
+
+        filasDia =
+        [
+            .. vista.Citas.Select(c => new FilaDia(c.InicioUtc, c))
+                .Concat(libres.Select(h => new FilaDia(h.Inicio, null)))
+                .OrderBy(f => f.Inicio),
+        ];
+    }
+
+    private IReadOnlyList<CitaResumen> CitasDe(DateOnly dia) =>
+        [.. vista!.Citas.Where(c => CalculadoraDisponibilidad.FechaEcuador(c.InicioUtc) == dia)];
+
+    private IEnumerable<BloqueoVista> BloqueosDe(DateOnly dia)
+    {
+        var inicio = CalculadoraDisponibilidad.InicioDelDiaUtc(dia);
+        var fin = CalculadoraDisponibilidad.InicioDelDiaUtc(dia.AddDays(1));
+        return vista!.Bloqueos.Where(b => b.InicioUtc < fin && inicio < b.FinUtc);
+    }
+
+    private string[] FranjasDe(DateOnly dia) =>
+    [
+        .. vista!.Franjas.Where(f => f.DiaSemana == dia.DayOfWeek).OrderBy(f => f.Inicio)
+            .Select(f => $"{Formato.HoraDelDia(f.Inicio)} a {Formato.HoraDelDia(f.Fin)}"),
+    ];
+
+    private Task CambiarVistaAsync(bool verSemana)
+    {
+        semana = verSemana;
+        return CargarAsync();
+    }
+
+    private Task MoverAsync(int sentido)
+    {
+        fecha = fecha.AddDays(sentido * (semana ? 7 : 1));
+        return CargarAsync();
+    }
+
+    private Task IrAHoyAsync()
+    {
+        fecha = Hoy;
+        return CargarAsync();
+    }
+
+    private Task IrAFechaAsync(DateTime? elegida)
+    {
+        if (elegida is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        fecha = DateOnly.FromDateTime(elegida.Value);
+        return CargarAsync();
+    }
+
+    private Task AbrirDiaAsync(DateOnly dia)
+    {
+        fecha = dia;
+        semana = false;
+        return CargarAsync();
+    }
+
+    private async Task AgendarAsync(DateTime? inicio)
+    {
+        var parametros = new DialogParameters<DialogoAgendarCita>
+        {
+            { d => d.InicioSugerido, inicio },
+            { d => d.FechaInicial, fecha },
+        };
+        var opciones = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, BackdropClick = false };
+        var dialogo = await Dialogos.ShowAsync<DialogoAgendarCita>("Agendar cita", parametros, opciones);
+        var resultado = await dialogo.Result;
+
+        if (resultado is { Canceled: false })
+        {
+            Snackbar.Add("Cita agendada y confirmada.", Severity.Success);
+            await CargarAsync();
+        }
+    }
+}

@@ -1,0 +1,133 @@
+@page "/admin/citas"
+@inject ListarSolicitudes Listar
+@inject CambiarEstadoCita CambiarEstado
+@inject IDialogService Dialogos
+@inject ISnackbar Snackbar
+@inject NavigationManager Navegacion
+
+<Titulo Texto="Citas" />
+
+<MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Class="mb-4">
+    <div>
+        <MudText Typo="Typo.h4" HtmlTag="h1">Citas</MudText>
+        <MudText Typo="Typo.body2" Class="mud-text-secondary">
+            Cola de trabajo: solicitudes nuevas, pacientes por llamar y citas por confirmar.
+        </MudText>
+    </div>
+    <MudStack Row="true" Spacing="2">
+        <MudButton Href="@RutasPanel.Agenda" Variant="Variant.Text" StartIcon="@Icons.Material.Filled.CalendarMonth">Agenda</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.EventAvailable" OnClick="AgendarAsync">
+            Agendar cita
+        </MudButton>
+    </MudStack>
+</MudStack>
+
+@if (cola is null)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+}
+else
+{
+    <MudTabs Elevation="1" Rounded="true" ApplyEffectsToContainer="true" TabPanelsClass="pa-4" @bind-ActivePanelIndex="pestana">
+        <MudTabPanel Text="@($"Nuevas ({cola.Nuevas.Count})")">
+            <MudText Typo="Typo.body2" Class="mb-3 mud-text-secondary">
+                Solicitudes de la página web. El horario queda reservado hasta la hora indicada; pásalas a la cola para llamar al paciente.
+            </MudText>
+            @TablaCitas((cola.Nuevas, true, [EstadoCita.EnCola]))
+        </MudTabPanel>
+        <MudTabPanel Text="@($"Por llamar ({cola.PorLlamar.Count})")">
+            <MudText Typo="Typo.body2" Class="mb-3 mud-text-secondary">Llama al paciente y registra el resultado.</MudText>
+            @TablaCitas((cola.PorLlamar, false, [EstadoCita.Confirmada, EstadoCita.NoContesta]))
+        </MudTabPanel>
+        <MudTabPanel Text="@($"No contestaron ({cola.NoContestaron.Count})")">
+            <MudText Typo="Typo.body2" Class="mb-3 mud-text-secondary">Vuelve a intentarlo más tarde o cancela la cita desde su ficha.</MudText>
+            @TablaCitas((cola.NoContestaron, false, [EstadoCita.EnCola]))
+        </MudTabPanel>
+        <MudTabPanel Text="@($"Reprogramadas ({cola.Reprogramadas.Count})")">
+            <MudText Typo="Typo.body2" Class="mb-3 mud-text-secondary">Citas movidas a otro horario que el paciente aún debe confirmar.</MudText>
+            @TablaCitas((cola.Reprogramadas, false, [EstadoCita.Confirmada]))
+        </MudTabPanel>
+    </MudTabs>
+}
+
+@code {
+    private ColaSolicitudes? cola;
+    private int pestana;
+    private bool ocupado;
+
+    protected override Task OnInitializedAsync() => CargarAsync();
+
+    private async Task CargarAsync() => cola = await Listar.EjecutarAsync(CancellationToken.None);
+
+    private async Task CambiarAsync(CitaResumen cita, EstadoCita nuevo)
+    {
+        ocupado = true;
+        var resultado = await CambiarEstado.EjecutarAsync(cita.Id, nuevo, null, CancellationToken.None);
+        ocupado = false;
+
+        Snackbar.Add(
+            resultado.Exito ? $"{cita.PacienteNombre}: {Formato.Estado(nuevo)}." : string.Join(" ", resultado.Errores),
+            resultado.Exito ? Severity.Success : Severity.Error);
+
+        await CargarAsync();
+    }
+
+    private async Task AgendarAsync()
+    {
+        var opciones = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, BackdropClick = false };
+        var dialogo = await Dialogos.ShowAsync<DialogoAgendarCita>("Agendar cita", opciones);
+        var resultado = await dialogo.Result;
+
+        if (resultado is { Canceled: false, Data: Guid id })
+        {
+            Snackbar.Add("Cita agendada y confirmada.", Severity.Success);
+            Navegacion.NavigateTo(RutasPanel.Cita(id));
+        }
+    }
+
+    /// <summary>Tabla de una pestaña: citas, si se muestra el vencimiento de la reserva y las acciones rápidas.</summary>
+    private RenderFragment TablaCitas((IReadOnlyList<CitaResumen> Citas, bool MostrarReserva, EstadoCita[] Acciones) datos) => __builder =>
+    {
+        <MudTable T="CitaResumen" Items="datos.Citas" Dense="true" Hover="true" Elevation="0" Breakpoint="Breakpoint.Sm">
+            <HeaderContent>
+                <MudTh>Cita</MudTh>
+                <MudTh>Paciente</MudTh>
+                <MudTh>Llamar a</MudTh>
+                @if (datos.MostrarReserva)
+                {
+                    <MudTh>Reserva hasta</MudTh>
+                }
+                <MudTh>Acciones</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Cita">
+                    <MudLink Href="@RutasPanel.Cita(context.Id)">@Formato.FechaHora(context.InicioUtc)</MudLink>
+                </MudTd>
+                <MudTd DataLabel="Paciente">
+                    @context.PacienteNombre
+                    <MudText Typo="Typo.caption" Class="d-block mud-text-secondary">@context.PacienteCedula</MudText>
+                </MudTd>
+                <MudTd DataLabel="Llamar a">
+                    <MudLink Href="@($"tel:{context.TelefonoParaLlamar}")">@Formato.Telefono(context.TelefonoParaLlamar)</MudLink>
+                </MudTd>
+                @if (datos.MostrarReserva)
+                {
+                    <MudTd DataLabel="Reserva hasta">@Formato.FechaHora(context.ReservaExpiraUtc, "-")</MudTd>
+                }
+                <MudTd DataLabel="Acciones">
+                    <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
+                        @foreach (var accion in datos.Acciones)
+                        {
+                            <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="@Formato.ColorEstado(accion)" Disabled="ocupado"
+                                       OnClick="() => CambiarAsync(context, accion)">@Formato.AccionHacia(accion)</MudButton>
+                        }
+                        <MudButton Size="Size.Small" Variant="Variant.Text" Href="@RutasPanel.Cita(context.Id)">Abrir</MudButton>
+                    </MudStack>
+                </MudTd>
+            </RowTemplate>
+            <NoRecordsContent>
+                <MudText>No hay citas en esta lista.</MudText>
+            </NoRecordsContent>
+        </MudTable>
+    };
+}

@@ -61,6 +61,13 @@ else
                         <MudLink Href="@RutasPanel.Paciente(pago.PacienteId)">@pago.PacienteNombre</MudLink>
                         <span class="mud-text-secondary"> · @pago.PacienteCedula</span>
                     </div>
+                    @if (pago.CitaId is { } citaId)
+                    {
+                        <div class="dato-etiqueta">Cita</div>
+                        <div class="dato-valor">
+                            <MudLink Href="@RutasPanel.Cita(citaId)">@Formato.FechaHora(pago.CitaInicioUtc, "Ver cita")</MudLink>
+                        </div>
+                    }
                     @if (pago.NumeroComprobante is not null)
                     {
                         <div class="dato-etiqueta">Número de comprobante</div>

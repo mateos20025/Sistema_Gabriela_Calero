@@ -1,0 +1,44 @@
+@inherits LayoutComponentBase
+@inject NavigationManager Navegacion
+@inject IOptions<OpcionesConsultorio> Consultorio
+
+@* Diseño de las páginas públicas con formularios (solicitar cita, privacidad). Se generan en el
+   servidor como HTML normal: funcionan sin conexión permanente, con el captcha y el límite de envíos. *@
+
+<MudThemeProvider Theme="TemaConsultorio.Tema" />
+
+@if (HttpContext is null)
+{
+    <p class="cuenta-cargando">Cargando…</p>
+}
+else
+{
+    <MudLayout>
+        <MudAppBar Elevation="0">
+            <a href="/" class="publico-marca" data-enhance-nav="false">
+                <MudIcon Icon="@Icons.Material.Filled.LocalHospital" Class="mr-2" />
+                <MudText Typo="Typo.h6">@Consultorio.Value.Nombre</MudText>
+            </a>
+        </MudAppBar>
+        <MudMainContent>
+            <MudContainer MaxWidth="MaxWidth.Medium" Class="py-8">
+                @Body
+            </MudContainer>
+        </MudMainContent>
+    </MudLayout>
+}
+
+@code {
+    // Si se llega navegando desde una pantalla interactiva no hay HttpContext: se recarga la página
+    // completa para que el servidor la genere de forma estática (igual que las páginas de cuenta).
+    [CascadingParameter]
+    private HttpContext? HttpContext { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        if (HttpContext is null)
+        {
+            Navegacion.Refresh(forceReload: true);
+        }
+    }
+}

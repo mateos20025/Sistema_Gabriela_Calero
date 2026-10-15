@@ -24,7 +24,7 @@ internal sealed class RepositorioPagosEnMemoria : IRepositorioPagos
         return Task.FromResult(pago is null
             ? null
             : new PagoDetalle(
-                pago.Id, pago.PacienteId, "María Pérez", "1710034065", pago.Metodo, pago.Estado, pago.Monto, pago.Concepto,
+                pago.Id, pago.PacienteId, "María Pérez", "1710034065", pago.CitaId, null, pago.Metodo, pago.Estado, pago.Monto, pago.Concepto,
                 pago.NumeroComprobante, pago.ComprobanteTipo, pago.ComprobanteTamanoBytes, "Asistente", pago.CreadoEn,
                 null, pago.ResueltoEn, pago.MotivoResolucion, []));
     }
@@ -39,6 +39,9 @@ internal sealed class RepositorioPagosEnMemoria : IRepositorioPagos
         Task.FromResult(new PaginaResultado<PagoResumen>([], 0));
 
     public Task<IReadOnlyList<PagoResumen>> ListarPorPacienteAsync(Guid pacienteId, CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<PagoResumen>>([]);
+
+    public Task<IReadOnlyList<PagoResumen>> ListarPorCitaAsync(Guid citaId, CancellationToken cancellationToken) =>
         Task.FromResult<IReadOnlyList<PagoResumen>>([]);
 
     public Task AgregarAsync(Pago pago, CancellationToken cancellationToken)

@@ -17,6 +17,8 @@ public interface IRepositorioPagos
 
     Task<IReadOnlyList<PagoResumen>> ListarPorPacienteAsync(Guid pacienteId, CancellationToken cancellationToken);
 
+    Task<IReadOnlyList<PagoResumen>> ListarPorCitaAsync(Guid citaId, CancellationToken cancellationToken);
+
     /// <exception cref="RegistroDuplicadoException">La captura ya está en otro pago.</exception>
     Task AgregarAsync(Pago pago, CancellationToken cancellationToken);
 

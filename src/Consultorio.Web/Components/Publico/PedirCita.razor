@@ -1,0 +1,233 @@
+@page "/citas/solicitar"
+@inject ConsultarDisponibilidadPublica Disponibilidad
+@inject SolicitarCita Solicitar
+@inject IVerificadorHumano Verificador
+@inject PoliticaPrivacidad Politica
+@inject IWebHostEnvironment Entorno
+
+<Titulo Texto="Solicitar cita" />
+
+@if (MostrarCaptcha)
+{
+    <HeadContent>
+        <script src="@UrlScriptCaptcha" async defer></script>
+    </HeadContent>
+}
+
+<MudPaper Elevation="1" Class="pa-6 pa-sm-8">
+    <MudText Typo="Typo.h4" HtmlTag="h1" Class="mb-1">Solicitar cita</MudText>
+
+    @if (registrada is not null)
+    {
+        <MudAlert Severity="Severity.Success" Class="my-4" role="status">
+            Recibimos tu solicitud para el <strong>@Formato.FechaHoraLarga(registrada.InicioUtc)</strong>.
+        </MudAlert>
+        <MudText Class="mb-2">
+            El consultorio te llamará para confirmarla. Reservamos ese horario para ti hasta el
+            @Formato.FechaHora(registrada.ReservaExpiraUtc); si no logramos comunicarnos antes, el horario se libera.
+        </MudText>
+        <MudText Typo="Typo.body2" Class="mud-text-secondary">Tu cita queda confirmada solo cuando el consultorio te llame.</MudText>
+    }
+    else if (dias is null)
+    {
+        <MudAlert Severity="Severity.Info" Class="mt-4">@MensajesCitas.SolicitudesWebDeshabilitadas</MudAlert>
+    }
+    else if (dias.Count == 0)
+    {
+        <MudAlert Severity="Severity.Info" Class="mt-4">
+            Por ahora no hay horarios disponibles en línea. Comunícate con el consultorio para agendar tu cita.
+        </MudAlert>
+    }
+    else
+    {
+        <MudText Typo="Typo.body2" Class="mb-6 mud-text-secondary">
+            Elige un día y una hora libres y déjanos tus datos. Te llamaremos para confirmar la cita.
+        </MudText>
+
+        <MudText Typo="Typo.h6" HtmlTag="h2" Class="mb-2">1. Elige el día</MudText>
+        <nav class="dias-publicos mb-6" aria-label="Días con horarios disponibles">
+            @foreach (var dia in dias)
+            {
+                @* data-enhance-nav="false": carga completa, para que el captcha se inicie bien. *@
+                <a href="@RutasPublicas.SolicitarCitaEnDia(dia.Fecha)" data-enhance-nav="false"
+                   class="@(dia.Fecha == diaElegido?.Fecha ? "dia-publico dia-publico-elegido" : "dia-publico")"
+                   aria-current="@(dia.Fecha == diaElegido?.Fecha ? "true" : null)">
+                    <span class="dia-publico-fecha">@Formato.FechaCorta(dia.Fecha)</span>
+                    <span class="dia-publico-cantidad">@TextoHorarios(dia.Horarios.Count)</span>
+                </a>
+            }
+        </nav>
+
+        @if (diaElegido is null)
+        {
+            <MudText Class="mud-text-secondary">Elige un día para ver sus horarios libres.</MudText>
+        }
+        else
+        {
+            <EditForm Model="Input" FormName="solicitar-cita" method="post" OnValidSubmit="EnviarAsync" novalidate>
+                <ValidadorFluent />
+                <MensajesError Errores="errores" />
+
+                <MudText Typo="Typo.h6" HtmlTag="h2" Class="mb-2">2. Elige la hora · @Formato.FechaLarga(diaElegido.Fecha)</MudText>
+                <fieldset class="horarios-publicos mb-6">
+                    <legend class="sr-only">Hora de la cita</legend>
+                    <InputRadioGroup @bind-Value="Input.Horario">
+                        @foreach (var horario in diaElegido.Horarios)
+                        {
+                            <label class="horario-opcion">
+                                <InputRadio Value="@SolicitarCitaComando.FormatearHorario(horario.Inicio)" />
+                                <span>@Formato.Hora(horario.Inicio)</span>
+                            </label>
+                        }
+                    </InputRadioGroup>
+                    <ValidationMessage For="() => Input.Horario" />
+                </fieldset>
+
+                <MudText Typo="Typo.h6" HtmlTag="h2" Class="mb-2">3. Tus datos</MudText>
+
+                <div class="campo">
+                    <label for="cedula">Cédula</label>
+                    <InputText id="cedula" @bind-Value="Input.Cedula" inputmode="numeric" maxlength="10" autocomplete="off" />
+                    <ValidationMessage For="() => Input.Cedula" />
+                </div>
+
+                <div class="campo">
+                    <label for="nombres">Nombres</label>
+                    <InputText id="nombres" @bind-Value="Input.Nombres" maxlength="@NombrePersona.LongitudMaxima" autocomplete="given-name" />
+                    <ValidationMessage For="() => Input.Nombres" />
+                </div>
+
+                <div class="campo">
+                    <label for="apellidos">Apellidos</label>
+                    <InputText id="apellidos" @bind-Value="Input.Apellidos" maxlength="@NombrePersona.LongitudMaxima" autocomplete="family-name" />
+                    <ValidationMessage For="() => Input.Apellidos" />
+                </div>
+
+                <div class="campo">
+                    <label for="telefono">Teléfono celular o fijo</label>
+                    <InputText id="telefono" type="tel" @bind-Value="Input.Telefono" maxlength="20" autocomplete="tel" />
+                    <span class="campo-ayuda">Te llamaremos a este número para confirmar.</span>
+                    <ValidationMessage For="() => Input.Telefono" />
+                </div>
+
+                <div class="campo">
+                    <label for="correo">Correo electrónico (opcional)</label>
+                    <InputText id="correo" type="email" @bind-Value="Input.CorreoElectronico" maxlength="@DireccionCorreo.LongitudMaxima" autocomplete="email" />
+                    <ValidationMessage For="() => Input.CorreoElectronico" />
+                </div>
+
+                @* Trampa para programas automáticos: las personas no ven este campo y lo dejan vacío. *@
+                <div class="campo-trampa" aria-hidden="true">
+                    <label for="@CampoTrampa">No completes este campo</label>
+                    <input id="@CampoTrampa" name="@CampoTrampa" type="text" tabindex="-1" autocomplete="off" />
+                </div>
+
+                <div class="consentimiento mb-4">
+                    <label>
+                        <InputCheckbox @bind-Value="Input.ConsentimientoAceptado" />
+                        <span>
+                            Acepto que el consultorio trate mis datos personales para gestionar mis citas, según la
+                            <a href="@RutasPublicas.Privacidad" target="_blank" rel="noopener">política de privacidad</a>.
+                        </span>
+                    </label>
+                    <ValidationMessage For="() => Input.ConsentimientoAceptado" />
+                </div>
+
+                @if (MostrarCaptcha)
+                {
+                    <div class="cf-turnstile mb-4" data-sitekey="@Verificador.ClaveSitio" data-language="es"></div>
+                }
+
+                <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large" FullWidth="true">
+                    Solicitar cita
+                </MudButton>
+            </EditForm>
+        }
+    }
+</MudPaper>
+
+@code {
+    private const string UrlScriptCaptcha = "https://challenges.cloudflare.com/turnstile/v0/api.js";
+
+    /// <summary>Nombre del campo que agrega el widget de Turnstile al formulario.</summary>
+    private const string CampoRespuestaCaptcha = "cf-turnstile-response";
+
+    private const string CampoTrampa = "sitio_web";
+
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    [SupplyParameterFromForm(FormName = "solicitar-cita")]
+    private SolicitarCitaComando Input { get; set; } = default!;
+
+    [SupplyParameterFromQuery(Name = "fecha")]
+    private string? Fecha { get; set; }
+
+    /// <summary><c>null</c> si no se reciben solicitudes en línea en este momento.</summary>
+    private IReadOnlyList<DiaDisponible>? dias;
+    private DiaDisponible? diaElegido;
+    private SolicitudRegistrada? registrada;
+    private IReadOnlyList<string> errores = [];
+
+    private bool MostrarCaptcha => Verificador.Habilitado && registrada is null && diaElegido is not null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Input ??= new SolicitarCitaComando();
+        await CargarDiasAsync();
+    }
+
+    private async Task CargarDiasAsync()
+    {
+        dias = await RecibeSolicitudesAsync()
+            ? await Disponibilidad.EjecutarAsync(HttpContext.RequestAborted)
+            : null;
+
+        diaElegido = DateOnly.TryParseExact(Fecha, "yyyy-MM-dd", out var fecha)
+            ? dias?.FirstOrDefault(d => d.Fecha == fecha)
+            : null;
+    }
+
+    /// <summary>
+    /// Sin política de privacidad publicada no se piden datos (LOPDP). Fuera de desarrollo, tampoco sin captcha,
+    /// para que el formulario no quede expuesto a programas automáticos.
+    /// </summary>
+    private async Task<bool> RecibeSolicitudesAsync() =>
+        (Verificador.Habilitado || Entorno.IsDevelopment())
+        && await Politica.EstaDisponibleAsync(HttpContext.RequestAborted);
+
+    private async Task EnviarAsync()
+    {
+        if (dias is null)
+        {
+            return;
+        }
+
+        var formulario = HttpContext.Request.Form;
+        if (!string.IsNullOrEmpty(formulario[CampoTrampa]))
+        {
+            errores = [MensajesCitas.NoPudimosRegistrar];
+            return;
+        }
+
+        var resultado = await Solicitar.EjecutarAsync(
+            Input,
+            formulario[CampoRespuestaCaptcha].ToString(),
+            HttpContext.Connection.RemoteIpAddress?.ToString(),
+            HttpContext.RequestAborted);
+
+        if (resultado.Exito)
+        {
+            registrada = resultado.Valor;
+            return;
+        }
+
+        errores = resultado.Errores;
+        Input.Horario = "";
+
+        // El horario pudo haberse ocupado mientras la persona llenaba el formulario.
+        await CargarDiasAsync();
+    }
+
+    private static string TextoHorarios(int cantidad) => cantidad == 1 ? "1 horario" : $"{cantidad} horarios";
+}

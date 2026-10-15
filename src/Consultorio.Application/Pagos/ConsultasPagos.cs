@@ -58,6 +58,16 @@ public sealed class ListarPagosDePaciente(IRepositorioPagos repositorio, IUsuari
     }
 }
 
+/// <summary>Caso de uso: pagos de una cita, para su ficha.</summary>
+public sealed class ListarPagosDeCita(IRepositorioPagos repositorio, IUsuarioActual usuarioActual)
+{
+    public async Task<IReadOnlyList<PagoResumen>> EjecutarAsync(Guid citaId, CancellationToken cancellationToken)
+    {
+        await usuarioActual.ExigirSesionAsync();
+        return await repositorio.ListarPorCitaAsync(citaId, cancellationToken);
+    }
+}
+
 /// <summary>Caso de uso: abrir la captura de una transferencia (solo personal con sesión).</summary>
 public sealed class ObtenerComprobantePago(IRepositorioPagos repositorio, IAlmacenArchivos almacen, IUsuarioActual usuarioActual)
 {

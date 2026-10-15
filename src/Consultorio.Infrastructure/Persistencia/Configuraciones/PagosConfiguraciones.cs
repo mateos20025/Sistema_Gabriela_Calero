@@ -1,3 +1,4 @@
+using Consultorio.Domain.Citas;
 using Consultorio.Domain.Pacientes;
 using Consultorio.Domain.Pagos;
 using Consultorio.Infrastructure.Identidad;
@@ -33,6 +34,11 @@ internal sealed class PagoConfiguracion : IEntityTypeConfiguration<Pago>
         builder.HasOne<Paciente>().WithMany()
             .HasForeignKey(p => p.PacienteId)
             .HasConstraintName("fk_pagos_pacientes_paciente_id")
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne<Cita>().WithMany()
+            .HasForeignKey(p => p.CitaId)
+            .HasConstraintName("fk_pagos_citas_cita_id")
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne<Usuario>().WithMany()

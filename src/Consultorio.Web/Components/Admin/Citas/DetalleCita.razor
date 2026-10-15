@@ -1,0 +1,254 @@
+@page "/admin/citas/{Id:guid}"
+@using Consultorio.Web.Components.Admin.Pagos
+@inject ObtenerCita Obtener
+@inject CambiarEstadoCita CambiarEstado
+@inject IRelojSistema Reloj
+@inject IDialogService Dialogos
+@inject ISnackbar Snackbar
+
+@* Título genérico a propósito: el nombre del paciente no debe quedar en el historial del navegador. *@
+<Titulo Texto="Detalle de la cita" />
+
+<MudButton Href="@RutasPanel.Citas" Variant="Variant.Text" StartIcon="@Icons.Material.Filled.ArrowBack" Class="mb-2">Citas</MudButton>
+
+@if (cargando)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+}
+else if (cita is null)
+{
+    <MudAlert Severity="Severity.Warning">@MensajesCitas.CitaNoExiste</MudAlert>
+}
+else
+{
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Class="mb-4">
+        <div>
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudText Typo="Typo.h4" HtmlTag="h1">@Formato.FechaHoraLarga(cita.InicioUtc)</MudText>
+                <ChipEstadoCita Estado="cita.Estado" />
+            </MudStack>
+            <MudText Typo="Typo.body2" Class="mud-text-secondary">
+                Hasta las @Formato.Hora(cita.FinUtc) · Origen: @Formato.Origen(cita.Origen) · Creada el @Formato.FechaHora(cita.CreadoUtc)
+            </MudText>
+        </div>
+        <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap">
+            @foreach (var estado in cita.SiguientesEstados)
+            {
+                <MudButton Variant="@(estado == EstadoCita.Cancelada ? Variant.Outlined : Variant.Filled)"
+                           Color="@Formato.ColorEstado(estado)" Disabled="ocupado || !SePuedeMarcar(estado)"
+                           OnClick="() => CambiarAsync(estado)">@Formato.AccionHacia(estado)</MudButton>
+            }
+            @if (cita.SePuedeReprogramar)
+            {
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.EditCalendar"
+                           OnClick="ReprogramarAsync" Disabled="ocupado">Reprogramar</MudButton>
+            }
+        </MudStack>
+    </MudStack>
+
+    @if (cita.Estado == EstadoCita.Pendiente && cita.ReservaExpiraUtc is { } expira)
+    {
+        <MudAlert Severity="Severity.Info" Class="mb-4">
+            Solicitud web: el horario está reservado hasta el @Formato.FechaHora(expira). Si no se atiende antes, se libera sola.
+        </MudAlert>
+    }
+
+    @if (cita.EstaActiva && cita.SiguientesEstados.Any(e => e is EstadoCita.Atendida) && !SePuedeMarcar(EstadoCita.Atendida))
+    {
+        <MudText Typo="Typo.caption" Class="d-block mb-4 mud-text-secondary">
+            "Atendida" y "No asistió" se habilitan desde la hora de la cita.
+        </MudText>
+    }
+
+    <MudGrid>
+        <MudItem xs="12" md="6">
+            <MudCard Outlined="true">
+                <MudCardHeader>
+                    <CardHeaderContent><MudText Typo="Typo.h6">Paciente</MudText></CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <div class="dato-etiqueta">Nombre</div>
+                    <div class="dato-valor">
+                        <MudLink Href="@RutasPanel.Paciente(cita.PacienteId)">@cita.PacienteNombre</MudLink>
+                        <span class="mud-text-secondary"> · @cita.PacienteCedula</span>
+                        @if (cita.PacienteDeshabilitado)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined" Class="ml-2">Deshabilitado</MudChip>
+                        }
+                    </div>
+                    <div class="dato-etiqueta">Teléfono de la ficha</div>
+                    <div class="dato-valor">
+                        <MudLink Href="@($"tel:{cita.PacienteTelefono}")">@Formato.Telefono(cita.PacienteTelefono)</MudLink>
+                    </div>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        @if (cita.ContactoNombre is not null)
+        {
+            <MudItem xs="12" md="6">
+                <MudCard Outlined="true">
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6">Datos escritos en la solicitud</MudText>
+                            <MudText Typo="Typo.body2" Class="mud-text-secondary">
+                                Tal como los escribió quien pidió la cita. No modifican la ficha del paciente: compáralos al llamar.
+                            </MudText>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        <div class="dato-etiqueta">Nombre</div>
+                        <div class="dato-valor">@cita.ContactoNombre</div>
+                        @if (cita.ContactoTelefono is not null)
+                        {
+                            <div class="dato-etiqueta">Teléfono</div>
+                            <div class="dato-valor">
+                                <MudLink Href="@($"tel:{cita.ContactoTelefono}")">@Formato.Telefono(cita.ContactoTelefono)</MudLink>
+                            </div>
+                        }
+                        @if (cita.ContactoCorreo is not null)
+                        {
+                            <div class="dato-etiqueta">Correo electrónico</div>
+                            <div class="dato-valor">@cita.ContactoCorreo</div>
+                        }
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        }
+
+        <MudItem xs="12">
+            <PagosDePaciente PacienteId="cita.PacienteId" NombrePaciente="@cita.PacienteNombre" CitaId="cita.Id"
+                             Habilitado="!cita.PacienteDeshabilitado" />
+        </MudItem>
+
+        <MudItem xs="12">
+            <MudCard Outlined="true">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Historial</MudText>
+                        <MudText Typo="Typo.body2" Class="mud-text-secondary">Cada cambio de estado, quién lo hizo y cuándo.</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudSimpleTable Dense="true" Hover="true" Elevation="0">
+                        <thead><tr><th>Fecha</th><th>Usuario</th><th>Cambio</th><th>Observación</th></tr></thead>
+                        <tbody>
+                            @foreach (var cambio in cita.Historial)
+                            {
+                                <tr>
+                                    <td>@Formato.FechaHora(cambio.FechaUtc)</td>
+                                    <td>@cambio.Usuario</td>
+                                    <td>@DescribirCambio(cambio)</td>
+                                    <td>@cambio.Observacion</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </MudSimpleTable>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+}
+
+@code {
+    private static readonly DialogOptions OpcionesDialogo = new() { MaxWidth = MaxWidth.Small, FullWidth = true, BackdropClick = false };
+
+    [Parameter]
+    public Guid Id { get; set; }
+
+    private CitaDetalle? cita;
+    private bool cargando = true;
+    private bool ocupado;
+
+    protected override Task OnParametersSetAsync() => CargarAsync();
+
+    private async Task CargarAsync()
+    {
+        cargando = true;
+        cita = await Obtener.EjecutarAsync(Id, CancellationToken.None);
+        cargando = false;
+    }
+
+    /// <summary>"Atendida" y "No asistió" solo tienen sentido desde la hora de la cita.</summary>
+    private bool SePuedeMarcar(EstadoCita estado) =>
+        estado is not (EstadoCita.Atendida or EstadoCita.NoAsistio) || Reloj.AhoraUtc >= cita!.InicioUtc;
+
+    private async Task CambiarAsync(EstadoCita nuevo)
+    {
+        string? observacion = null;
+
+        if (nuevo == EstadoCita.Cancelada)
+        {
+            observacion = await PedirMotivoAsync();
+            if (observacion is null)
+            {
+                return;
+            }
+        }
+        else if (nuevo is EstadoCita.Atendida or EstadoCita.NoAsistio)
+        {
+            var confirmado = await Dialogos.ShowMessageBoxAsync(
+                Formato.AccionHacia(nuevo),
+                $"La cita quedará como «{Formato.Estado(nuevo)}». Este estado es final y no se puede cambiar.",
+                yesText: Formato.AccionHacia(nuevo),
+                cancelText: "Volver");
+
+            if (confirmado != true)
+            {
+                return;
+            }
+        }
+
+        ocupado = true;
+        var resultado = await CambiarEstado.EjecutarAsync(Id, nuevo, observacion, CancellationToken.None);
+        ocupado = false;
+
+        Snackbar.Add(
+            resultado.Exito ? $"Cita: {Formato.Estado(nuevo)}." : string.Join(" ", resultado.Errores),
+            resultado.Exito ? Severity.Success : Severity.Error);
+
+        await CargarAsync();
+    }
+
+    private async Task<string?> PedirMotivoAsync()
+    {
+        var parametros = new DialogParameters<DialogoMotivo>
+        {
+            { d => d.Mensaje, "Indica por qué se cancela (por ejemplo, el paciente no puede asistir). El horario quedará libre." },
+            { d => d.TextoBoton, "Cancelar cita" },
+            { d => d.ColorBoton, Color.Error },
+            { d => d.LongitudMaxima, Cita.LongitudMaximaObservacion },
+        };
+        var dialogo = await Dialogos.ShowAsync<DialogoMotivo>("Cancelar cita", parametros, OpcionesDialogo);
+        var resultado = await dialogo.Result;
+        return resultado is { Canceled: false, Data: string motivo } ? motivo : null;
+    }
+
+    private async Task ReprogramarAsync()
+    {
+        var parametros = new DialogParameters<DialogoReprogramarCita>
+        {
+            { d => d.CitaId, cita!.Id },
+            { d => d.InicioActualUtc, cita.InicioUtc },
+        };
+        var dialogo = await Dialogos.ShowAsync<DialogoReprogramarCita>("Reprogramar cita", parametros, OpcionesDialogo);
+        var resultado = await dialogo.Result;
+
+        if (resultado is { Canceled: false })
+        {
+            Snackbar.Add("Cita reprogramada. Confírmala cuando el paciente acepte el nuevo horario.", Severity.Success);
+            await CargarAsync();
+        }
+    }
+
+    private static string DescribirCambio(CambioCita cambio)
+    {
+        var texto = cambio.EstadoAnterior is null
+            ? $"Creada ({Formato.Estado(cambio.EstadoNuevo)})"
+            : $"{Formato.Estado(cambio.EstadoAnterior.Value)} → {Formato.Estado(cambio.EstadoNuevo)}";
+
+        return cambio is { InicioAnteriorUtc: { } antes, InicioNuevoUtc: { } despues }
+            ? $"{texto}: de {Formato.FechaHora(antes)} a {Formato.FechaHora(despues)}"
+            : texto;
+    }
+}

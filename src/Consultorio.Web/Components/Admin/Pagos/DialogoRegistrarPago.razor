@@ -79,6 +79,10 @@
     [Parameter]
     public string? PacienteNombre { get; set; }
 
+    /// <summary>Si viene de la ficha de una cita, el pago queda asociado a ella.</summary>
+    [Parameter]
+    public Guid? CitaId { get; set; }
+
     private MudForm formulario = default!;
     private readonly RegistrarPagoComando modelo = new();
     private PacienteResumen? pacienteElegido;
@@ -95,6 +99,8 @@
         {
             modelo.PacienteId = id;
         }
+
+        modelo.CitaId = CitaId;
 
         // Valores sugeridos que definió la doctora (no están escritos en el código).
         var configuracion = await ObtenerConfiguracion.EjecutarAsync(CancellationToken.None);

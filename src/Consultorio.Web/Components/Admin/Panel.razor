@@ -44,7 +44,8 @@
     private static readonly Modulo[] modulos =
     [
         new("Pacientes", "Registro, búsqueda y datos de contacto de los pacientes.", Icons.Material.Filled.Badge, RutasPanel.Pacientes),
-        new("Citas", "Cola de solicitudes, confirmaciones y agenda diaria y semanal.", Icons.Material.Filled.Event, null),
+        new("Agenda", "Citas del día y de la semana, horarios libres para agendar.", Icons.Material.Filled.CalendarMonth, RutasPanel.Agenda),
+        new("Citas", "Cola de solicitudes de la web, llamadas y confirmaciones.", Icons.Material.Filled.PhoneCallback, RutasPanel.Citas),
         new("Pagos", "Validación de transferencias y pagos en efectivo.", Icons.Material.Filled.Payments, RutasPanel.Pagos),
         new("Usuarios", "Cuentas del personal: crear, desactivar y restablecer contraseñas.", Icons.Material.Filled.People, RutasPanel.Usuarios, SoloDoctora: true),
     ];

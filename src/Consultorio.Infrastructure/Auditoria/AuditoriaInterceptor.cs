@@ -1,4 +1,5 @@
 using Consultorio.Application.Auditoria;
+using Consultorio.Domain.Citas;
 using Consultorio.Domain.Pacientes;
 using Consultorio.Domain.Pagos;
 using Consultorio.Infrastructure.Persistencia;
@@ -14,8 +15,20 @@ namespace Consultorio.Infrastructure.Auditoria;
 /// </summary>
 public sealed class AuditoriaInterceptor : SaveChangesInterceptor
 {
-    /// <summary>Entidades cuyos cambios se auditan. Los próximos módulos (citas) se agregan aquí.</summary>
-    private static readonly HashSet<Type> TiposAuditados = [typeof(Paciente), typeof(Pago), typeof(ConfiguracionPagos)];
+    /// <summary>
+    /// Entidades cuyos cambios se auditan. Las citas no están aquí porque tienen su propio historial
+    /// (tabla historial_cita) con el estado, quién lo cambió y la observación.
+    /// </summary>
+    private static readonly HashSet<Type> TiposAuditados =
+    [
+        typeof(Paciente), typeof(Pago), typeof(ConfiguracionPagos), typeof(ConfiguracionAgenda), typeof(BloqueoAgenda),
+    ];
+
+    /// <summary>
+    /// El horario semanal (franjas) se reemplaza completo al guardar la configuración de la agenda:
+    /// en vez de auditar cada franja, se anota el campo "HorarioAtencion" en el registro de la configuración.
+    /// </summary>
+    private const string CampoHorarioAtencion = "HorarioAtencion";
 
     private static readonly HashSet<string> CamposTecnicos =
     [
@@ -51,16 +64,19 @@ public sealed class AuditoriaInterceptor : SaveChangesInterceptor
             return;
         }
 
+        var horarioCambio = db.ChangeTracker.Entries<FranjaAtencion>()
+            .Any(e => e.State is EntityState.Added or EntityState.Deleted);
+
         var registros = db.ChangeTracker.Entries()
             .Where(e => TiposAuditados.Contains(e.Metadata.ClrType))
-            .Select(e => CrearRegistro(e, db.UsuarioAuditoriaId))
+            .Select(e => CrearRegistro(e, db.UsuarioAuditoriaId, horarioCambio))
             .OfType<RegistroAuditoria>()
             .ToList();
 
         db.Auditoria.AddRange(registros);
     }
 
-    private static RegistroAuditoria? CrearRegistro(EntityEntry entrada, Guid? usuarioId)
+    private static RegistroAuditoria? CrearRegistro(EntityEntry entrada, Guid? usuarioId, bool horarioCambio)
     {
         AccionAuditoria accion;
         string[] campos = [];
@@ -88,12 +104,21 @@ public sealed class AuditoriaInterceptor : SaveChangesInterceptor
                 };
 
                 campos = [.. modificados.Where(p => p.Metadata.Name != CampoDeshabilitado).Select(p => p.Metadata.Name)];
+                if (horarioCambio && entrada.Entity is ConfiguracionAgenda)
+                {
+                    campos = [.. campos, CampoHorarioAtencion];
+                }
+
                 if (accion == AccionAuditoria.Modificado && campos.Length == 0)
                 {
                     return null; // Nada relevante cambió.
                 }
 
                 estadoNuevo = modificados.FirstOrDefault(p => p.Metadata.Name == CampoEstado)?.CurrentValue?.ToString();
+                break;
+
+            case EntityState.Deleted:
+                accion = AccionAuditoria.Eliminado;
                 break;
 
             default:
