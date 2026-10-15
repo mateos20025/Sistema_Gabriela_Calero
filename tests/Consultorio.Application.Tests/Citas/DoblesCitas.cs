@@ -186,8 +186,14 @@ internal static class DatosCitas
     public static RepositorioAgendaEnMemoria AgendaConfigurada(bool web = true, int maximoActivas = 2) =>
         new() { Configuracion = Configuracion(web, maximoActivas), Franjas = Franjas() };
 
-    public static Cita Confirmada(Guid pacienteId, IntervaloUtc horario) =>
-        Cita.AgendarDesdePanel(pacienteId, horario, Guid.NewGuid(), Ahora, null);
+    /// <summary>Agendada desde el panel y ya confirmada con el paciente.</summary>
+    public static Cita Confirmada(Guid pacienteId, IntervaloUtc horario)
+    {
+        var cita = Cita.AgendarDesdePanel(pacienteId, horario, Guid.NewGuid(), Ahora, null);
+        cita.CambiarEstado(EstadoCita.Confirmada, Guid.NewGuid(), Ahora, null);
+        cita.MarcarCambiosGuardados();
+        return cita;
+    }
 
     public static Cita Solicitada(Guid pacienteId, IntervaloUtc horario, DateTime? creadaUtc = null) =>
         Cita.SolicitarDesdeWeb(

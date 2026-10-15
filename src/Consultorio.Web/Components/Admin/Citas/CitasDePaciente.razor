@@ -75,7 +75,7 @@
 
         if (resultado is { Canceled: false })
         {
-            Snackbar.Add("Cita agendada y confirmada.", Severity.Success);
+            Snackbar.Add(DialogoAgendarCita.MensajeAgendada, Severity.Success);
             citas = await Listar.EjecutarAsync(PacienteId, CancellationToken.None);
         }
     }

@@ -17,6 +17,13 @@ public class CitaTests
 
     private static Cita DelPanel() => Cita.AgendarDesdePanel(PacienteId, Horario, Asistente, Ahora, null);
 
+    private static Cita Confirmada()
+    {
+        var cita = DelPanel();
+        cita.CambiarEstado(EstadoCita.Confirmada, Asistente, Ahora, null);
+        return cita;
+    }
+
     private static Cita DeLaWeb() => Cita.SolicitarDesdeWeb(
         PacienteId, Horario, Ahora, horasReserva: 24, new ContactoSolicitud(" Ana ", "Ruiz", "099 123 4567", "Ana@Correo.com"));
 
@@ -64,16 +71,16 @@ public class CitaTests
     }
 
     [Fact]
-    public void Desde_el_panel_la_cita_nace_confirmada_y_con_historial()
+    public void Desde_el_panel_la_cita_queda_en_la_cola_y_con_historial()
     {
         var cita = DelPanel();
 
-        Assert.Equal(EstadoCita.Confirmada, cita.Estado);
+        Assert.Equal(EstadoCita.EnCola, cita.Estado);
         Assert.Equal(OrigenRegistro.Panel, cita.Origen);
         Assert.Null(cita.ReservaExpiraEn);
         var cambio = Assert.Single(cita.CambiosNuevos);
         Assert.Null(cambio.EstadoAnterior);
-        Assert.Equal(EstadoCita.Confirmada, cambio.EstadoNuevo);
+        Assert.Equal(EstadoCita.EnCola, cambio.EstadoNuevo);
         Assert.Equal(Asistente, cambio.UsuarioId);
     }
 
@@ -165,12 +172,18 @@ public class CitaTests
     [Fact]
     public void Atendida_y_no_asistio_solo_despues_de_la_hora_de_la_cita()
     {
-        var cita = DelPanel();
+        var cita = Confirmada();
 
         Assert.Throws<ExcepcionDominio>(() => cita.CambiarEstado(EstadoCita.Atendida, Asistente, Horario.Inicio.AddMinutes(-1), null));
 
         cita.CambiarEstado(EstadoCita.Atendida, Asistente, Horario.Inicio.AddMinutes(5), null);
         Assert.Equal(EstadoCita.Atendida, cita.Estado);
+    }
+
+    [Fact]
+    public void Una_cita_del_panel_sin_confirmar_no_se_marca_atendida()
+    {
+        Assert.Throws<ExcepcionDominio>(() => DelPanel().CambiarEstado(EstadoCita.Atendida, Asistente, Horario.Inicio.AddMinutes(5), null));
     }
 
     [Fact]

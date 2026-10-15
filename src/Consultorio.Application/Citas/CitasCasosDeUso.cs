@@ -37,7 +37,7 @@ public sealed class ExpirarReservasVencidas(IRepositorioCitas repositorio, IRelo
     }
 }
 
-/// <summary>Caso de uso: el personal agenda una cita (por teléfono o en persona); queda confirmada.</summary>
+/// <summary>Caso de uso: el personal agenda una cita desde el panel; queda en la cola hasta confirmarla con el paciente.</summary>
 public sealed class AgendarCita(
     IRepositorioCitas repositorioCitas,
     IRepositorioPacientes repositorioPacientes,

@@ -80,7 +80,7 @@ else
 
         if (resultado is { Canceled: false, Data: Guid id })
         {
-            Snackbar.Add("Cita agendada y confirmada.", Severity.Success);
+            Snackbar.Add(DialogoAgendarCita.MensajeAgendada, Severity.Success);
             Navegacion.NavigateTo(RutasPanel.Cita(id));
         }
     }

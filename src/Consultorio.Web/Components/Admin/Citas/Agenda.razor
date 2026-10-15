@@ -238,7 +238,7 @@ else
 
         if (resultado is { Canceled: false })
         {
-            Snackbar.Add("Cita agendada y confirmada.", Severity.Success);
+            Snackbar.Add(DialogoAgendarCita.MensajeAgendada, Severity.Success);
             await CargarAsync();
         }
     }

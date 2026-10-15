@@ -30,13 +30,13 @@ public class CitasTests
         new() { PacienteId = paciente.Id, InicioUtc = DatosCitas.LunesA(hora, minuto), Observacion = "" };
 
     [Fact]
-    public async Task Agenda_una_cita_confirmada_en_un_horario_libre()
+    public async Task Agenda_en_un_horario_libre_y_la_cita_queda_por_llamar()
     {
         var resultado = await Agendar().EjecutarAsync(ComandoAgendar(9, 30), CancellationToken.None);
 
         Assert.True(resultado.Exito);
         var cita = Assert.Single(citas.Citas);
-        Assert.Equal(EstadoCita.Confirmada, cita.Estado);
+        Assert.Equal(EstadoCita.EnCola, cita.Estado);
         Assert.Equal(DatosCitas.LunesA(10), cita.Fin);
         Assert.Equal(OrigenRegistro.Panel, cita.Origen);
     }
@@ -267,6 +267,17 @@ public class CitasTests
         Assert.Null(vencida.CambiosNuevos[^1].UsuarioId);
         Assert.Equal(EstadoCita.Pendiente, vigente.Estado);
         Assert.Equal(EstadoCita.Confirmada, confirmada.Estado);
+    }
+
+    [Fact]
+    public async Task La_cita_agendada_desde_el_panel_aparece_en_por_llamar()
+    {
+        await Agendar().EjecutarAsync(ComandoAgendar(9), CancellationToken.None);
+
+        var cola = await new ListarSolicitudes(citas, UsuarioActualFalso.Asistente()).EjecutarAsync(CancellationToken.None);
+
+        Assert.Single(cola.PorLlamar);
+        Assert.Empty(cola.Nuevas);
     }
 
     [Fact]

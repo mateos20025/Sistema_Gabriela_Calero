@@ -1,7 +1,7 @@
 @inject AgendarCita Agendar
 @inject BuscarPacientes Buscar
 
-@* Agendar una cita desde el panel (por teléfono o en persona). Queda confirmada. *@
+@* Agendar una cita desde el panel. Reserva el horario y queda en Citas → Por llamar hasta confirmarla con el paciente. *@
 
 <MudDialog>
     <DialogContent>
@@ -25,6 +25,10 @@
         <MudTextField T="string" @bind-Value="modelo.Observacion" Label="Observación (opcional)" Variant="Variant.Outlined"
                       Lines="2" Class="mt-4" MaxLength="@Cita.LongitudMaximaObservacion" Counter="@Cita.LongitudMaximaObservacion"
                       HelperText="No escribas diagnósticos ni datos clínicos aquí." />
+
+        <MudText Typo="Typo.caption" Class="d-block mt-3 mud-text-secondary">
+            La cita quedará en Citas → Por llamar hasta que alguien confirme el horario con el paciente.
+        </MudText>
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="() => Dialogo.Cancel()">Cancelar</MudButton>
@@ -36,6 +40,9 @@
 </MudDialog>
 
 @code {
+    /// <summary>Aviso que muestran las pantallas que abren este diálogo cuando se agenda.</summary>
+    public const string MensajeAgendada = "Cita agendada. Queda en Citas → Por llamar hasta confirmarla con el paciente.";
+
     [CascadingParameter]
     private IMudDialogInstance Dialogo { get; set; } = default!;
 

@@ -62,7 +62,10 @@ public sealed class Cita
     public bool ReservaVencida(DateTime ahoraUtc) =>
         Estado == EstadoCita.Pendiente && ReservaExpiraEn is { } expira && expira <= ahoraUtc;
 
-    /// <summary>El personal agenda por teléfono o en persona: la cita nace confirmada.</summary>
+    /// <summary>
+    /// El personal agenda desde el panel: la cita reserva el horario y queda en la cola de llamadas ("En cola")
+    /// hasta que alguien confirme con el paciente.
+    /// </summary>
     public static Cita AgendarDesdePanel(Guid pacienteId, IntervaloUtc horario, Guid usuarioId, DateTime ahoraUtc, string? observacion)
     {
         ExigirUtc(ahoraUtc);
@@ -71,8 +74,8 @@ public sealed class Cita
             throw new ExcepcionDominio("Se debe saber quién agenda la cita.");
         }
 
-        var cita = Nueva(pacienteId, horario, ahoraUtc, EstadoCita.Confirmada, OrigenRegistro.Panel);
-        cita.RegistrarCambio(null, EstadoCita.Confirmada, usuarioId, observacion ?? "Agendada desde el panel.", null, null);
+        var cita = Nueva(pacienteId, horario, ahoraUtc, EstadoCita.EnCola, OrigenRegistro.Panel);
+        cita.RegistrarCambio(null, EstadoCita.EnCola, usuarioId, observacion ?? "Agendada desde el panel.", null, null);
         return cita;
     }
 
