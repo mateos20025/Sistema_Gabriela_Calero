@@ -1,4 +1,5 @@
 using Consultorio.Application.Pacientes;
+using Consultorio.Application.Pagos;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -18,6 +19,19 @@ public static class DependencyInjection
         services.AddScoped<HabilitarPaciente>();
         services.AddScoped<BuscarPacientes>();
         services.AddScoped<ObtenerPaciente>();
+
+        // Pagos
+        services.AddScoped<RegistrarPago>();
+        services.AddScoped<ValidarPago>();
+        services.AddScoped<RechazarPago>();
+        services.AddScoped<MarcarPagoRecibido>();
+        services.AddScoped<AnularPago>();
+        services.AddScoped<BuscarPagos>();
+        services.AddScoped<ObtenerPago>();
+        services.AddScoped<ListarPagosDePaciente>();
+        services.AddScoped<ObtenerComprobantePago>();
+        services.AddScoped<ObtenerConfiguracionPagos>();
+        services.AddScoped<ActualizarConfiguracionPagos>();
 
         return services;
     }

@@ -26,6 +26,7 @@ internal sealed class ConsultaAuditoria(IDbContextFactory<ConsultorioDbContext> 
                     Usuario = usuario != null ? usuario.NombreCompleto : null,
                     registro.Accion,
                     registro.Campos,
+                    registro.EstadoNuevo,
                 })
             .Take(MaximoEventos)
             .ToListAsync(cancellationToken);
@@ -35,7 +36,8 @@ internal sealed class ConsultaAuditoria(IDbContextFactory<ConsultorioDbContext> 
                 f.CreadoEn,
                 f.Usuario ?? NombreSistema,
                 Enum.Parse<AccionAuditoria>(f.Accion),
-                f.Campos))
+                f.Campos,
+                f.EstadoNuevo))
             .ToList();
     }
 }

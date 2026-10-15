@@ -25,6 +25,9 @@ public sealed class RegistroAuditoria
     /// <summary>Nombres de los campos que cambiaron (sin sus valores).</summary>
     public string[] Campos { get; set; } = [];
 
+    /// <summary>Nuevo estado del registro (pagos, citas). No es un dato personal.</summary>
+    public string? EstadoNuevo { get; set; }
+
     public DateTime CreadoEn { get; set; }
 
     public DateTime ActualizadoEn { get; set; }
@@ -39,6 +42,7 @@ internal sealed class RegistroAuditoriaConfiguracion : IEntityTypeConfiguration<
         builder.Property(r => r.Id).ValueGeneratedNever();
         builder.Property(r => r.Entidad).HasMaxLength(50).IsRequired();
         builder.Property(r => r.Accion).HasMaxLength(20).IsRequired();
+        builder.Property(r => r.EstadoNuevo).HasMaxLength(40);
 
         builder.HasOne<Usuario>()
             .WithMany()

@@ -1,0 +1,33 @@
+@* Pide un motivo obligatorio (rechazar o anular). Devuelve el texto escrito. *@
+
+<MudDialog>
+    <DialogContent>
+        <MudText Class="mb-4">@Mensaje</MudText>
+        <MudTextField T="string" @bind-Value="motivo" Label="Motivo" Variant="Variant.Outlined" Lines="3"
+                      MaxLength="LongitudMaxima" Counter="LongitudMaxima" Immediate="true" AutoFocus="true" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => Dialogo.Cancel()">Cancelar</MudButton>
+        <MudButton Variant="Variant.Filled" Color="ColorBoton" Disabled="string.IsNullOrWhiteSpace(motivo)"
+                   OnClick="() => Dialogo.Close(DialogResult.Ok(motivo.Trim()))">@TextoBoton</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance Dialogo { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public string Mensaje { get; set; } = "";
+
+    [Parameter, EditorRequired]
+    public string TextoBoton { get; set; } = "";
+
+    [Parameter]
+    public Color ColorBoton { get; set; } = Color.Primary;
+
+    [Parameter]
+    public int LongitudMaxima { get; set; } = 300;
+
+    private string motivo = "";
+}

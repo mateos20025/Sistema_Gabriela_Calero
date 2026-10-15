@@ -1,0 +1,179 @@
+@inject RegistrarPago Registrar
+@inject BuscarPacientes Buscar
+@inject ObtenerConfiguracionPagos ObtenerConfiguracion
+@inject FluentValidation.IValidator<RegistrarPagoComando> Validador
+
+<MudDialog>
+    <DialogContent>
+        <MensajesError Errores="errores" />
+
+        <MudForm @ref="formulario" Model="modelo" Validation="@Validador.ParaMudForm()">
+            @if (PacienteId is null)
+            {
+                <MudAutocomplete T="PacienteResumen" Label="Paciente" Variant="Variant.Outlined" Class="mb-3"
+                                 SearchFunc="BuscarPacientesAsync" ToStringFunc="TextoPaciente" MinCharacters="2"
+                                 DebounceInterval="300" ShowProgressIndicator="true" ResetValueOnEmptyText="true"
+                                 Value="pacienteElegido" ValueChanged="ElegirPaciente"
+                                 Required="true" RequiredError="Elige el paciente."
+                                 HelperText="Escribe el nombre, apellido o cédula" />
+            }
+            else
+            {
+                <MudTextField T="string" Value="PacienteNombre" Label="Paciente" ReadOnly="true" Variant="Variant.Outlined" Class="mb-3" />
+            }
+
+            <MudRadioGroup T="MetodoPago" @bind-Value="modelo.Metodo" Class="mb-2">
+                <MudRadio T="MetodoPago" Value="MetodoPago.Transferencia" Color="Color.Primary">Transferencia</MudRadio>
+                <MudRadio T="MetodoPago" Value="MetodoPago.Efectivo" Color="Color.Primary">Efectivo en el consultorio</MudRadio>
+            </MudRadioGroup>
+
+            <MudGrid Spacing="2" Class="mb-3">
+                <MudItem xs="12" sm="5">
+                    <MudTextField T="string" @bind-Value="modelo.Monto" For="() => modelo.Monto" Label="Monto"
+                                  Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentText="$"
+                                  HelperText="Ejemplo: 35,00" MaxLength="15" />
+                </MudItem>
+                <MudItem xs="12" sm="7">
+                    <MudTextField T="string" @bind-Value="modelo.Concepto" For="() => modelo.Concepto" Label="Concepto"
+                                  Variant="Variant.Outlined" MaxLength="@Pago.LongitudMaximaConcepto" />
+                </MudItem>
+            </MudGrid>
+
+            @if (modelo.Metodo == MetodoPago.Transferencia)
+            {
+                <MudTextField T="string" @bind-Value="modelo.NumeroComprobante" For="() => modelo.NumeroComprobante"
+                              Label="Número de comprobante (opcional)" Variant="Variant.Outlined" Class="mb-3"
+                              MaxLength="@Pago.LongitudMaximaNumeroComprobante" />
+
+                <MudPaper Outlined="true" Class="pa-3">
+                    <MudText Typo="Typo.subtitle2" Class="mb-2">Captura de la transferencia</MudText>
+                    <label class="selector-archivo">
+                        <InputFile OnChange="AlSeleccionarArchivoAsync" accept=".jpg,.jpeg,.png,.pdf" class="selector-archivo-input" />
+                        <MudIcon Icon="@Icons.Material.Filled.UploadFile" Class="mr-2" />
+                        @(nombreArchivo ?? "Seleccionar archivo (JPG, PNG o PDF, máximo 5 MB)")
+                    </label>
+                    @if (errorArchivo is not null)
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Error" Class="d-block mt-1">@errorArchivo</MudText>
+                    }
+                </MudPaper>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => Dialogo.Cancel()">Cancelar</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="GuardarAsync" Disabled="guardando || leyendoArchivo">
+            Registrar pago
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance Dialogo { get; set; } = default!;
+
+    /// <summary>Si viene de la ficha del paciente, el paciente ya está elegido.</summary>
+    [Parameter]
+    public Guid? PacienteId { get; set; }
+
+    [Parameter]
+    public string? PacienteNombre { get; set; }
+
+    private MudForm formulario = default!;
+    private readonly RegistrarPagoComando modelo = new();
+    private PacienteResumen? pacienteElegido;
+    private ArchivoSubido? archivo;
+    private string? nombreArchivo;
+    private string? errorArchivo;
+    private IReadOnlyList<string> errores = [];
+    private bool guardando;
+    private bool leyendoArchivo;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (PacienteId is { } id)
+        {
+            modelo.PacienteId = id;
+        }
+
+        // Valores sugeridos que definió la doctora (no están escritos en el código).
+        var configuracion = await ObtenerConfiguracion.EjecutarAsync(CancellationToken.None);
+        if (configuracion.PrecioConsulta is { } precio)
+        {
+            modelo.Monto = Formato.MontoEditable(precio);
+        }
+
+        modelo.Concepto = configuracion.ConceptoPredeterminado ?? "";
+    }
+
+    private async Task<IEnumerable<PacienteResumen>> BuscarPacientesAsync(string texto, CancellationToken cancellationToken)
+    {
+        var pagina = await Buscar.EjecutarAsync(new FiltroPacientes(texto, IncluirDeshabilitados: false, Pagina: 0, TamanoPagina: 10), cancellationToken);
+        return pagina.Elementos;
+    }
+
+    private static string TextoPaciente(PacienteResumen? paciente) =>
+        paciente is null ? "" : $"{paciente.Nombres} {paciente.Apellidos} ({paciente.Cedula})";
+
+    private void ElegirPaciente(PacienteResumen? paciente)
+    {
+        pacienteElegido = paciente;
+        modelo.PacienteId = paciente?.Id ?? Guid.Empty;
+    }
+
+    private async Task AlSeleccionarArchivoAsync(InputFileChangeEventArgs evento)
+    {
+        archivo = null;
+        nombreArchivo = null;
+        errorArchivo = null;
+
+        var seleccionado = evento.File;
+        if (seleccionado.Size > ArchivosComprobante.TamanoMaximoBytes)
+        {
+            errorArchivo = MensajesPagos.ComprobanteMuyGrande;
+            return;
+        }
+
+        leyendoArchivo = true;
+        try
+        {
+            // El tope de lectura protege al servidor aunque el navegador mienta sobre el tamaño.
+            await using var flujo = seleccionado.OpenReadStream(ArchivosComprobante.TamanoMaximoBytes);
+            using var memoria = new MemoryStream();
+            await flujo.CopyToAsync(memoria);
+
+            archivo = new ArchivoSubido(seleccionado.Name, memoria.ToArray());
+            nombreArchivo = $"{seleccionado.Name} ({Formato.Tamano(seleccionado.Size)})";
+        }
+        catch (IOException)
+        {
+            errorArchivo = "No se pudo leer el archivo. Inténtalo de nuevo.";
+        }
+        finally
+        {
+            leyendoArchivo = false;
+        }
+    }
+
+    private async Task GuardarAsync()
+    {
+        await formulario.ValidateAsync();
+        if (!formulario.IsValid)
+        {
+            return;
+        }
+
+        guardando = true;
+        var resultado = await Registrar.EjecutarAsync(
+            modelo, modelo.Metodo == MetodoPago.Transferencia ? archivo : null, CancellationToken.None);
+        guardando = false;
+
+        if (!resultado.Exito)
+        {
+            errores = resultado.Errores;
+            return;
+        }
+
+        Dialogo.Close(DialogResult.Ok(resultado.Valor));
+    }
+}

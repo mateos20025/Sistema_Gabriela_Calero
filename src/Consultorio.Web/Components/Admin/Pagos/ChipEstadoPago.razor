@@ -1,0 +1,6 @@
+<MudChip T="string" Size="Size.Small" Color="@Formato.ColorEstado(Estado)" Variant="Variant.Outlined">@Formato.Estado(Estado)</MudChip>
+
+@code {
+    [Parameter, EditorRequired]
+    public EstadoPago Estado { get; set; }
+}

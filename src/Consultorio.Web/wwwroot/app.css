@@ -151,6 +151,39 @@ h1:focus {
     cursor: pointer;
 }
 
+/* ---------- Pagos ---------- */
+
+/* Botón para elegir archivo: el <input type="file"> real queda oculto dentro de la etiqueta. */
+.selector-archivo {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 14px;
+    border: 1px dashed var(--mud-palette-lines-inputs);
+    border-radius: var(--mud-default-borderradius);
+    cursor: pointer;
+    color: var(--mud-palette-text-primary);
+    word-break: break-all;
+}
+
+.selector-archivo:hover {
+    border-color: var(--mud-palette-primary);
+}
+
+.selector-archivo-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+}
+
+.comprobante-imagen {
+    display: block;
+    max-width: 100%;
+    max-height: 480px;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mud-default-borderradius);
+}
+
 .blazor-error-boundary {
     background: #b32121;
     padding: 1rem;

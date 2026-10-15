@@ -78,6 +78,7 @@ try
         // Blazor agrega su propia cabecera "frame-ancestors"; se alinea con la nuestra (nadie puede incrustar el sitio).
         .AddInteractiveServerRenderMode(opciones => opciones.ContentSecurityFrameAncestorsPolicy = "'none'");
     app.MapEndpointsCuenta();
+    app.MapEndpointsArchivos();
 
     await app.RunAsync();
 }

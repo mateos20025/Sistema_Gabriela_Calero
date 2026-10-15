@@ -37,6 +37,7 @@
         <MudNavMenu Class="mt-2">
             <MudNavLink Href="@RutasCuenta.Panel" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard">Inicio</MudNavLink>
             <MudNavLink Href="@RutasPanel.Pacientes" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Badge">Pacientes</MudNavLink>
+            <MudNavLink Href="@RutasPanel.Pagos" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Payments">Pagos</MudNavLink>
             <AuthorizeView Roles="@Roles.Doctora">
                 <MudNavLink Href="@RutasPanel.Usuarios" Icon="@Icons.Material.Filled.People">Usuarios</MudNavLink>
             </AuthorizeView>

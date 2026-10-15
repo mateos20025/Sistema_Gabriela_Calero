@@ -1,0 +1,111 @@
+@page "/admin/pagos/configuracion"
+@attribute [Authorize(Policy = Politicas.SoloDoctora)]
+@inject ObtenerConfiguracionPagos Obtener
+@inject ActualizarConfiguracionPagos Actualizar
+@inject FluentValidation.IValidator<ConfiguracionPagosComando> Validador
+@inject ISnackbar Snackbar
+
+<Titulo Texto="Configuración de pagos" />
+
+<MudButton Href="@RutasPanel.Pagos" Variant="Variant.Text" StartIcon="@Icons.Material.Filled.ArrowBack" Class="mb-2">Pagos</MudButton>
+
+<MudText Typo="Typo.h4" HtmlTag="h1">Configuración de pagos</MudText>
+<MudText Typo="Typo.body2" Class="mb-4 mud-text-secondary">
+    Precio sugerido de la consulta y cuenta para recibir transferencias. Los cambios quedan registrados en la auditoría.
+</MudText>
+
+@if (modelo is null)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+}
+else
+{
+    <MudPaper Elevation="1" Class="pa-6" Style="max-width:720px">
+        <MensajesError Errores="errores" />
+
+        <MudForm @ref="formulario" Model="modelo" Validation="@Validador.ParaMudForm()">
+            <MudText Typo="Typo.h6" Class="mb-2">Consulta</MudText>
+            <MudGrid Spacing="2" Class="mb-4">
+                <MudItem xs="12" sm="5">
+                    <MudTextField T="string" @bind-Value="modelo.PrecioConsulta" For="() => modelo.PrecioConsulta"
+                                  Label="Precio sugerido (opcional)" Variant="Variant.Outlined"
+                                  Adornment="Adornment.Start" AdornmentText="$" HelperText="Ejemplo: 35,00" MaxLength="15" />
+                </MudItem>
+                <MudItem xs="12" sm="7">
+                    <MudTextField T="string" @bind-Value="modelo.ConceptoPredeterminado" For="() => modelo.ConceptoPredeterminado"
+                                  Label="Concepto sugerido (opcional)" Variant="Variant.Outlined"
+                                  HelperText="Ejemplo: Consulta médica" MaxLength="@Pago.LongitudMaximaConcepto" />
+                </MudItem>
+            </MudGrid>
+
+            <MudSwitch T="bool" @bind-Value="modelo.RecibeTransferencias" Color="Color.Primary" Label="Recibo pagos por transferencia" Class="mb-2" />
+
+            @if (modelo.RecibeTransferencias)
+            {
+                <MudGrid Spacing="2">
+                    <MudItem xs="12" sm="7">
+                        <MudTextField T="string" @bind-Value="modelo.Banco" For="() => modelo.Banco" Label="Banco"
+                                      Variant="Variant.Outlined" MaxLength="@DatosBancarios.LongitudMaximaTexto" />
+                    </MudItem>
+                    <MudItem xs="12" sm="5">
+                        <MudSelect T="TipoCuentaBancaria" @bind-Value="modelo.TipoCuenta" For="() => modelo.TipoCuenta"
+                                   Label="Tipo de cuenta" Variant="Variant.Outlined">
+                            <MudSelectItem T="TipoCuentaBancaria" Value="TipoCuentaBancaria.Ahorros">Ahorros</MudSelectItem>
+                            <MudSelectItem T="TipoCuentaBancaria" Value="TipoCuentaBancaria.Corriente">Corriente</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField T="string" @bind-Value="modelo.NumeroCuenta" For="() => modelo.NumeroCuenta"
+                                      Label="Número de cuenta" Variant="Variant.Outlined" MaxLength="25" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField T="string" @bind-Value="modelo.IdentificacionTitular" For="() => modelo.IdentificacionTitular"
+                                      Label="Cédula o RUC del titular" Variant="Variant.Outlined" MaxLength="15" />
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudTextField T="string" @bind-Value="modelo.Titular" For="() => modelo.Titular"
+                                      Label="Titular de la cuenta" Variant="Variant.Outlined" MaxLength="@DatosBancarios.LongitudMaximaTexto" />
+                    </MudItem>
+                </MudGrid>
+            }
+        </MudForm>
+
+        <MudStack Row="true" Justify="Justify.FlexEnd" Class="mt-6">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="GuardarAsync" Disabled="guardando">Guardar configuración</MudButton>
+        </MudStack>
+    </MudPaper>
+}
+
+@code {
+    private MudForm formulario = default!;
+    private ConfiguracionPagosComando? modelo;
+    private IReadOnlyList<string> errores = [];
+    private bool guardando;
+
+    protected override async Task OnInitializedAsync() => await CargarAsync();
+
+    private async Task CargarAsync() =>
+        modelo = ConfiguracionPagosComando.Desde(await Obtener.EjecutarAsync(CancellationToken.None));
+
+    private async Task GuardarAsync()
+    {
+        await formulario.ValidateAsync();
+        if (!formulario.IsValid)
+        {
+            return;
+        }
+
+        guardando = true;
+        var resultado = await Actualizar.EjecutarAsync(modelo!, CancellationToken.None);
+        guardando = false;
+
+        errores = resultado.Errores;
+        if (resultado.Exito)
+        {
+            Snackbar.Add("Configuración de pagos guardada.", Severity.Success);
+            await CargarAsync();
+            // Quita las marcas rojas de un intento anterior con errores.
+            await formulario.ResetValidationAsync();
+        }
+    }
+}

@@ -1,0 +1,141 @@
+@page "/admin/pagos"
+@inject BuscarPagos Buscar
+@inject ObtenerConfiguracionPagos ObtenerConfiguracion
+@inject IDialogService Dialogos
+@inject ISnackbar Snackbar
+@inject NavigationManager Navegacion
+
+<Titulo Texto="Pagos" />
+
+<MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Class="mb-4">
+    <div>
+        <MudText Typo="Typo.h4" HtmlTag="h1">Pagos</MudText>
+        <MudText Typo="Typo.body2" Class="mud-text-secondary">Transferencias por validar, cobros en efectivo e historial.</MudText>
+    </div>
+    <MudStack Row="true" Spacing="2">
+        <AuthorizeView Roles="@Roles.Doctora">
+            <MudButton Href="@RutasPanel.AjustesPagos" Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Settings">Configuración</MudButton>
+        </AuthorizeView>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.AddCard" OnClick="RegistrarAsync">
+            Registrar pago
+        </MudButton>
+    </MudStack>
+</MudStack>
+
+<DatosBancariosTarjeta Configuracion="configuracion" />
+
+<MudPaper Elevation="1" Class="pa-4 mb-4">
+    <MudGrid Spacing="2">
+        <MudItem xs="12" sm="4">
+            <MudSelect T="FiltroEstadoPago" Value="estado" ValueChanged="CambiarEstadoAsync" Label="Estado"
+                       Variant="Variant.Outlined" Margin="Margin.Dense">
+                <MudSelectItem T="FiltroEstadoPago" Value="FiltroEstadoPago.Pendientes">Pendientes</MudSelectItem>
+                <MudSelectItem T="FiltroEstadoPago" Value="FiltroEstadoPago.PorValidar">Transferencias por validar</MudSelectItem>
+                <MudSelectItem T="FiltroEstadoPago" Value="FiltroEstadoPago.PorCobrar">Efectivo por cobrar</MudSelectItem>
+                <MudSelectItem T="FiltroEstadoPago" Value="FiltroEstadoPago.Completados">Validados y cobrados</MudSelectItem>
+                <MudSelectItem T="FiltroEstadoPago" Value="FiltroEstadoPago.Rechazados">Rechazados</MudSelectItem>
+                <MudSelectItem T="FiltroEstadoPago" Value="FiltroEstadoPago.Anulados">Anulados</MudSelectItem>
+                <MudSelectItem T="FiltroEstadoPago" Value="FiltroEstadoPago.Todos">Todos</MudSelectItem>
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="8">
+            <MudTextField T="string" @bind-Value="texto" Placeholder="Buscar por paciente, cédula o concepto"
+                          Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search" DebounceInterval="400"
+                          OnDebounceIntervalElapsed="AlBuscarAsync" MaxLength="@FiltroPagos.LongitudMaximaTexto"
+                          aria-label="Buscar pagos" />
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+<MudTable @ref="tabla" T="PagoResumen" ServerData="CargarAsync" RowsPerPage="20" Hover="true"
+          Breakpoint="Breakpoint.Sm" Elevation="1" LoadingProgressColor="Color.Primary"
+          OnRowClick="AbrirPago" RowClass="fila-clicable">
+    <HeaderContent>
+        <MudTh>Fecha</MudTh>
+        <MudTh>Paciente</MudTh>
+        <MudTh>Concepto</MudTh>
+        <MudTh>Método</MudTh>
+        <MudTh Style="text-align:right">Monto</MudTh>
+        <MudTh>Estado</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Fecha">@Formato.FechaHora(context.CreadoUtc)</MudTd>
+        <MudTd DataLabel="Paciente">
+            <MudLink Href="@RutasPanel.Pago(context.Id)">@context.PacienteNombre</MudLink>
+            <MudText Typo="Typo.caption" Class="d-block mud-text-secondary">@context.PacienteCedula</MudText>
+        </MudTd>
+        <MudTd DataLabel="Concepto">@context.Concepto</MudTd>
+        <MudTd DataLabel="Método">@Formato.Metodo(context.Metodo)</MudTd>
+        <MudTd DataLabel="Monto" Style="text-align:right">@Formato.Moneda(context.Monto)</MudTd>
+        <MudTd DataLabel="Estado"><ChipEstadoPago Estado="context.Estado" /></MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText>No hay pagos con ese filtro.</MudText>
+    </NoRecordsContent>
+    <LoadingContent>
+        <MudText>Cargando pagos...</MudText>
+    </LoadingContent>
+    <PagerContent>
+        <MudTablePager RowsPerPageString="Filas por página:" InfoFormat="{first_item}-{last_item} de {all_items}"
+                       PageSizeOptions="opcionesTamanoPagina" />
+    </PagerContent>
+</MudTable>
+
+@code {
+    private static readonly int[] opcionesTamanoPagina = [10, 20, 50];
+
+    private static readonly DialogOptions OpcionesDialogo = new()
+    {
+        MaxWidth = MaxWidth.Small,
+        FullWidth = true,
+        CloseOnEscapeKey = true,
+        BackdropClick = false,
+    };
+
+    private MudTable<PagoResumen> tabla = default!;
+    private ConfiguracionPagosVista? configuracion;
+    private FiltroEstadoPago estado = FiltroEstadoPago.Pendientes;
+    private string? texto;
+
+    protected override async Task OnInitializedAsync() =>
+        configuracion = await ObtenerConfiguracion.EjecutarAsync(CancellationToken.None);
+
+    private async Task<TableData<PagoResumen>> CargarAsync(TableState tabla, CancellationToken cancellationToken)
+    {
+        var pagina = await Buscar.EjecutarAsync(new FiltroPagos(texto, estado, tabla.Page, tabla.PageSize), cancellationToken);
+        return new TableData<PagoResumen> { Items = pagina.Elementos, TotalItems = pagina.Total };
+    }
+
+    private Task CambiarEstadoAsync(FiltroEstadoPago nuevo)
+    {
+        estado = nuevo;
+        return tabla.ReloadServerData();
+    }
+
+    private Task AlBuscarAsync(string valor)
+    {
+        texto = valor;
+        return tabla.ReloadServerData();
+    }
+
+    private void AbrirPago(TableRowClickEventArgs<PagoResumen> argumentos)
+    {
+        if (argumentos.Item is not null)
+        {
+            Navegacion.NavigateTo(RutasPanel.Pago(argumentos.Item.Id));
+        }
+    }
+
+    private async Task RegistrarAsync()
+    {
+        var dialogo = await Dialogos.ShowAsync<DialogoRegistrarPago>("Registrar pago", OpcionesDialogo);
+        var resultado = await dialogo.Result;
+
+        if (resultado is { Canceled: false, Data: Guid id })
+        {
+            Snackbar.Add("Pago registrado.", Severity.Success);
+            Navegacion.NavigateTo(RutasPanel.Pago(id));
+        }
+    }
+}

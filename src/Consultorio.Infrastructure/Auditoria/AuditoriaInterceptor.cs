@@ -1,5 +1,6 @@
 using Consultorio.Application.Auditoria;
 using Consultorio.Domain.Pacientes;
+using Consultorio.Domain.Pagos;
 using Consultorio.Infrastructure.Persistencia;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
@@ -13,8 +14,8 @@ namespace Consultorio.Infrastructure.Auditoria;
 /// </summary>
 public sealed class AuditoriaInterceptor : SaveChangesInterceptor
 {
-    /// <summary>Entidades cuyos cambios se auditan. Los próximos módulos (citas, pagos) se agregan aquí.</summary>
-    private static readonly HashSet<Type> TiposAuditados = [typeof(Paciente)];
+    /// <summary>Entidades cuyos cambios se auditan. Los próximos módulos (citas) se agregan aquí.</summary>
+    private static readonly HashSet<Type> TiposAuditados = [typeof(Paciente), typeof(Pago), typeof(ConfiguracionPagos)];
 
     private static readonly HashSet<string> CamposTecnicos =
     [
@@ -24,6 +25,9 @@ public sealed class AuditoriaInterceptor : SaveChangesInterceptor
     ];
 
     private const string CampoDeshabilitado = nameof(Paciente.DeshabilitadoEn);
+
+    /// <summary>Si la entidad tiene un campo "Estado", su nuevo valor se guarda en el historial.</summary>
+    private const string CampoEstado = nameof(Pago.Estado);
 
     public override InterceptionResult<int> SavingChanges(DbContextEventData eventData, InterceptionResult<int> result)
     {
@@ -60,11 +64,14 @@ public sealed class AuditoriaInterceptor : SaveChangesInterceptor
     {
         AccionAuditoria accion;
         string[] campos = [];
+        string? estadoNuevo = null;
+        var tieneEstado = entrada.Metadata.FindProperty(CampoEstado) is not null;
 
         switch (entrada.State)
         {
             case EntityState.Added:
                 accion = AccionAuditoria.Creado;
+                estadoNuevo = tieneEstado ? entrada.Property(CampoEstado).CurrentValue?.ToString() : null;
                 break;
 
             case EntityState.Modified:
@@ -86,6 +93,7 @@ public sealed class AuditoriaInterceptor : SaveChangesInterceptor
                     return null; // Nada relevante cambió.
                 }
 
+                estadoNuevo = modificados.FirstOrDefault(p => p.Metadata.Name == CampoEstado)?.CurrentValue?.ToString();
                 break;
 
             default:
@@ -100,6 +108,7 @@ public sealed class AuditoriaInterceptor : SaveChangesInterceptor
             EntidadId = (Guid)entrada.Property("Id").CurrentValue!,
             Accion = accion.ToString(),
             Campos = campos,
+            EstadoNuevo = estadoNuevo,
         };
     }
 }

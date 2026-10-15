@@ -1,4 +1,5 @@
 using Consultorio.Domain.Pacientes;
+using Consultorio.Domain.Pagos;
 using Consultorio.Infrastructure.Auditoria;
 using Consultorio.Infrastructure.Identidad;
 using Microsoft.AspNetCore.Identity;
@@ -15,6 +16,10 @@ public sealed class ConsultorioDbContext(DbContextOptions<ConsultorioDbContext> 
     : IdentityDbContext<Usuario, IdentityRole<Guid>, Guid>(options)
 {
     public DbSet<Paciente> Pacientes => Set<Paciente>();
+
+    public DbSet<Pago> Pagos => Set<Pago>();
+
+    public DbSet<ConfiguracionPagos> ConfiguracionPagos => Set<ConfiguracionPagos>();
 
     public DbSet<RegistroAuditoria> Auditoria => Set<RegistroAuditoria>();
 

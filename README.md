@@ -25,7 +25,8 @@ Todos los comandos se escriben en **Developer PowerShell** (o en el Símbolo del
 |---|---|---|
 | Login y usuarios | Listo | Inicio de sesión, roles Doctora y Asistente, contraseña temporal obligatoria de cambiar, bloqueo tras 5 intentos fallidos, gestión de usuarios (solo la doctora). |
 | Pacientes | Listo | Registro por cédula ecuatoriana con consentimiento de datos, búsqueda, edición, deshabilitar y habilitar, historial de cambios (solo la doctora). |
-| Citas, Pagos, WhatsApp, Historia clínica | Pendiente | Aparecen como "Próximamente" en el panel. |
+| Pagos | Listo | Transferencias con captura (validar o rechazar), efectivo en el consultorio, anulación, detección de capturas repetidas, cuenta bancaria y precio sugerido (los define la doctora). Por ahora cada pago se asocia al paciente; cuando exista Citas se asociará también a la cita. |
+| Citas, WhatsApp, Historia clínica | Pendiente | Citas aparece como "Próximamente" en el panel. |
 
 Direcciones (con la app corriendo):
 
@@ -34,6 +35,8 @@ Direcciones (con la app corriendo):
 | Página pública | https://localhost:7111/ |
 | Panel del personal | https://localhost:7111/admin |
 | Pacientes | https://localhost:7111/admin/pacientes |
+| Pagos | https://localhost:7111/admin/pagos |
+| Configuración de pagos (solo doctora) | https://localhost:7111/admin/pagos/configuracion |
 | Usuarios (solo doctora) | https://localhost:7111/admin/usuarios |
 
 ---
@@ -213,6 +216,11 @@ Cuando descargues cambios nuevos del repositorio (`git pull`), no hace falta nad
 1. **Doctora**: en **Usuarios**, pulsa **Nuevo usuario** para crear la cuenta de la asistente. El sistema genera una contraseña temporal que se muestra **una sola vez**: entrégala en persona.
 2. **Asistente**: inicia sesión con esa contraseña temporal y crea la suya.
 3. **Pacientes**: en **Pacientes**, pulsa **Nuevo paciente**, completa los datos y marca la casilla de consentimiento (es obligatoria por la LOPDP).
+4. **Doctora**: en **Pagos → Configuración**, registra el precio sugerido de la consulta y la cuenta bancaria para transferencias.
+5. **Pagos**: en **Pagos** (o desde la ficha del paciente), pulsa **Registrar pago**.
+   - **Transferencia**: adjunta la captura que envió el paciente (JPG, PNG o PDF, máximo 5 MB). Queda "Por validar" hasta que alguien confirme que el dinero llegó a la cuenta y pulse **Validar** (o **Rechazar**, con motivo).
+   - **Efectivo**: queda "Por cobrar" hasta que el paciente pague en el consultorio y se pulse **Marcar como pagado**.
+   - Un pago pendiente registrado por error se **anula** (con motivo); nunca se borra.
 
 Qué puede hacer cada rol:
 
@@ -220,10 +228,15 @@ Qué puede hacer cada rol:
 |---|---|---|
 | Registrar, buscar y editar pacientes | Sí | Sí |
 | Deshabilitar y habilitar pacientes | Sí | Sí |
-| Ver el historial de cambios de un paciente | Sí | No |
+| Registrar pagos, validar o rechazar transferencias, cobrar efectivo, anular | Sí | Sí |
+| Ver la cuenta bancaria (para enviarla a los pacientes) | Sí | Sí |
+| Cambiar el precio sugerido y la cuenta bancaria | Sí | No |
+| Ver el historial de cambios de pacientes y pagos | Sí | No |
 | Crear usuarios, cambiar roles, restablecer contraseñas | Sí | No |
 
-Un paciente **deshabilitado** no aparece en las búsquedas, conserva todos sus datos y no se puede editar hasta habilitarlo. Para verlo, activa **Mostrar deshabilitados** en la lista.
+Un paciente **deshabilitado** no aparece en las búsquedas, conserva todos sus datos y no se puede editar ni recibir pagos hasta habilitarlo. Para verlo, activa **Mostrar deshabilitados** en la lista.
+
+Sobre los montos: se pueden escribir como `35`, `35,50` o `35.50`. Un monto ambiguo como `1.234` se rechaza; escríbelo como `1234` o `1.234,00`.
 
 ---
 
@@ -288,6 +301,9 @@ docker exec -it consultorio-db psql -U consultorio -d consultorio
 | `address already in use` o el puerto 5432 está ocupado | Hay otro PostgreSQL instalado en la computadora. | Detén el otro servicio de PostgreSQL o cambia el puerto en `docker-compose.yml` y en la cadena de conexión. |
 | "Cuenta bloqueada por demasiados intentos" | 5 contraseñas incorrectas seguidas. | Espera 15 minutos, pide a la doctora que la desbloquee en Usuarios, o usa el comando de emergencia. |
 | "Demasiados intentos. Espera un minuto" | Más de 10 envíos por minuto desde la misma computadora. | Espera un minuto. |
+| "La captura debe ser una imagen JPG o PNG, o un PDF" | El archivo no es realmente una imagen o un PDF (aunque su nombre termine en .png). | Pide al paciente una captura de pantalla o el PDF que entrega el banco. |
+| "Esta captura ya se registró el ..." | Esa misma captura ya está en otro pago vigente. | Revisa el pago indicado; si fue un error, anúlalo y vuelve a registrar. |
+| `Configura 'Archivos:RutaBase'` | Falta la carpeta donde se guardan las capturas. | Revisa `src/Consultorio.Web/appsettings.json`. |
 
 ---
 
@@ -303,6 +319,7 @@ Se define en `src/Consultorio.Web/appsettings.json`; en producción se puede sob
 | `UsuarioInicial:*` | Cuenta inicial de la doctora; solo se usa si todavía no existe ninguna. **Nunca en el repositorio.** |
 | `ConnectionStrings:Default` | Conexión a PostgreSQL. **Nunca en el repositorio.** |
 | `DataProtection:RutaClaves` | Carpeta donde se guardan las claves que cifran las sesiones (necesaria en producción con Docker). |
+| `Archivos:RutaBase` | Carpeta de las capturas de pago (por defecto `almacen`, dentro de `src/Consultorio.Web`). Está **fuera de `wwwroot`**: solo se pueden ver con sesión iniciada. Contiene datos personales: no se sube a GitHub y debe incluirse en los respaldos. |
 
 Si falta una clave obligatoria, la aplicación no arranca y el mensaje indica cuál es.
 

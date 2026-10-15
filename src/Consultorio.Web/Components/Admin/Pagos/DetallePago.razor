@@ -1,0 +1,247 @@
+@page "/admin/pagos/{Id:guid}"
+@inject ObtenerPago Obtener
+@inject ValidarPago Validar
+@inject RechazarPago Rechazar
+@inject MarcarPagoRecibido MarcarRecibido
+@inject AnularPago Anular
+@inject IDialogService Dialogos
+@inject ISnackbar Snackbar
+
+<Titulo Texto="Detalle del pago" />
+
+<MudButton Href="@RutasPanel.Pagos" Variant="Variant.Text" StartIcon="@Icons.Material.Filled.ArrowBack" Class="mb-2">Pagos</MudButton>
+
+@if (cargando)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+}
+else if (pago is null)
+{
+    <MudAlert Severity="Severity.Warning">El pago no existe.</MudAlert>
+}
+else
+{
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Class="mb-4">
+        <div>
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudText Typo="Typo.h4" HtmlTag="h1">@Formato.Moneda(pago.Monto)</MudText>
+                <ChipEstadoPago Estado="pago.Estado" />
+            </MudStack>
+            <MudText Typo="Typo.body2" Class="mud-text-secondary">@pago.Concepto · @Formato.Metodo(pago.Metodo)</MudText>
+        </div>
+        <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap">
+            @if (pago.Estado == EstadoPago.PendienteValidacion)
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Success" StartIcon="@Icons.Material.Filled.CheckCircle"
+                           OnClick="ValidarAsync" Disabled="ocupado">Validar</MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Error" StartIcon="@Icons.Material.Filled.Cancel"
+                           OnClick="RechazarAsync" Disabled="ocupado">Rechazar</MudButton>
+            }
+            @if (pago.Estado == EstadoPago.PendienteEnConsultorio)
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Success" StartIcon="@Icons.Material.Filled.Payments"
+                           OnClick="MarcarRecibidoAsync" Disabled="ocupado">Marcar como pagado</MudButton>
+            }
+            @if (pago.EstaPendiente)
+            {
+                <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Block" OnClick="AnularAsync" Disabled="ocupado">Anular</MudButton>
+            }
+        </MudStack>
+    </MudStack>
+
+    <MudGrid>
+        <MudItem xs="12" md="6">
+            <MudCard Outlined="true">
+                <MudCardHeader>
+                    <CardHeaderContent><MudText Typo="Typo.h6">Datos del pago</MudText></CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <div class="dato-etiqueta">Paciente</div>
+                    <div class="dato-valor">
+                        <MudLink Href="@RutasPanel.Paciente(pago.PacienteId)">@pago.PacienteNombre</MudLink>
+                        <span class="mud-text-secondary"> · @pago.PacienteCedula</span>
+                    </div>
+                    @if (pago.NumeroComprobante is not null)
+                    {
+                        <div class="dato-etiqueta">Número de comprobante</div>
+                        <div class="dato-valor">@pago.NumeroComprobante</div>
+                    }
+                    <div class="dato-etiqueta">Registrado</div>
+                    <div class="dato-valor">@Formato.FechaHora(pago.CreadoUtc) por @pago.RegistradoPor</div>
+                    @if (pago.ResueltoUtc is { } resuelto)
+                    {
+                        <div class="dato-etiqueta">@EtiquetaResolucion(pago.Estado)</div>
+                        <div class="dato-valor">@Formato.FechaHora(resuelto) por @pago.ResueltoPor</div>
+                    }
+                    @if (pago.MotivoResolucion is not null)
+                    {
+                        <div class="dato-etiqueta">Motivo</div>
+                        <div class="dato-valor">@pago.MotivoResolucion</div>
+                    }
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        @if (pago.TieneComprobante)
+        {
+            <MudItem xs="12" md="6">
+                <MudCard Outlined="true">
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6">Captura de la transferencia</MudText>
+                            <MudText Typo="Typo.body2" Class="mud-text-secondary">@pago.ComprobanteTipo?.ToString().ToUpperInvariant() · @Formato.Tamano(pago.ComprobanteTamanoBytes ?? 0)</MudText>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        @if (pago.ComprobanteTipo == TipoArchivoComprobante.Pdf)
+                        {
+                            <MudButton Href="@RutasPanel.Comprobante(pago.Id)" Target="_blank" Variant="Variant.Outlined"
+                                       StartIcon="@Icons.Material.Filled.PictureAsPdf">Abrir PDF</MudButton>
+                        }
+                        else
+                        {
+                            <a href="@RutasPanel.Comprobante(pago.Id)" target="_blank" rel="noopener" title="Abrir en otra pestaña">
+                                <img src="@RutasPanel.Comprobante(pago.Id)" alt="Captura de la transferencia" class="comprobante-imagen" />
+                            </a>
+                        }
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        }
+
+        <AuthorizeView Roles="@Roles.Doctora">
+            <MudItem xs="12">
+                <MudCard Outlined="true">
+                    <MudCardHeader>
+                        <CardHeaderContent><MudText Typo="Typo.h6">Historial de cambios</MudText></CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        <MudSimpleTable Dense="true" Hover="true" Elevation="0">
+                            <thead><tr><th>Fecha</th><th>Usuario</th><th>Acción</th></tr></thead>
+                            <tbody>
+                                @foreach (var evento in pago.Historial)
+                                {
+                                    <tr>
+                                        <td>@Formato.FechaHora(evento.FechaUtc)</td>
+                                        <td>@evento.Usuario</td>
+                                        <td>@DescribirEvento(evento)</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </MudSimpleTable>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        </AuthorizeView>
+    </MudGrid>
+}
+
+@code {
+    private static readonly DialogOptions OpcionesDialogo = new() { MaxWidth = MaxWidth.Small, FullWidth = true, BackdropClick = false };
+
+    [Parameter]
+    public Guid Id { get; set; }
+
+    private PagoDetalle? pago;
+    private bool cargando = true;
+    private bool ocupado;
+
+    protected override Task OnParametersSetAsync() => CargarAsync();
+
+    private async Task CargarAsync()
+    {
+        cargando = true;
+        pago = await Obtener.EjecutarAsync(Id, CancellationToken.None);
+        cargando = false;
+    }
+
+    private async Task ValidarAsync()
+    {
+        var confirmado = await Dialogos.ShowMessageBoxAsync(
+            "Validar transferencia",
+            $"Confirma que {Formato.Moneda(pago!.Monto)} ya están en la cuenta del consultorio.",
+            yesText: "Validar",
+            cancelText: "Cancelar");
+
+        if (confirmado == true)
+        {
+            await EjecutarAsync(Validar.EjecutarAsync(Id, CancellationToken.None), "Transferencia validada.");
+        }
+    }
+
+    private async Task RechazarAsync()
+    {
+        var motivo = await PedirMotivoAsync("Rechazar transferencia", "Indica por qué se rechaza (por ejemplo, el dinero no llegó o el monto no coincide).", "Rechazar", Color.Error);
+        if (motivo is not null)
+        {
+            await EjecutarAsync(Rechazar.EjecutarAsync(Id, motivo, CancellationToken.None), "Transferencia rechazada.");
+        }
+    }
+
+    private async Task MarcarRecibidoAsync()
+    {
+        var confirmado = await Dialogos.ShowMessageBoxAsync(
+            "Registrar cobro",
+            $"Confirma que recibiste {Formato.Moneda(pago!.Monto)} en efectivo.",
+            yesText: "Marcar como pagado",
+            cancelText: "Cancelar");
+
+        if (confirmado == true)
+        {
+            await EjecutarAsync(MarcarRecibido.EjecutarAsync(Id, CancellationToken.None), "Pago registrado como cobrado.");
+        }
+    }
+
+    private async Task AnularAsync()
+    {
+        var motivo = await PedirMotivoAsync("Anular pago", "Indica por qué se anula (por ejemplo, se registró por error o el paciente no asistió).", "Anular", Color.Warning);
+        if (motivo is not null)
+        {
+            await EjecutarAsync(Anular.EjecutarAsync(Id, motivo, CancellationToken.None), "Pago anulado.");
+        }
+    }
+
+    private async Task<string?> PedirMotivoAsync(string titulo, string mensaje, string boton, Color color)
+    {
+        var parametros = new DialogParameters<DialogoMotivo>
+        {
+            { d => d.Mensaje, mensaje },
+            { d => d.TextoBoton, boton },
+            { d => d.ColorBoton, color },
+            { d => d.LongitudMaxima, Pago.LongitudMaximaMotivo },
+        };
+        var dialogo = await Dialogos.ShowAsync<DialogoMotivo>(titulo, parametros, OpcionesDialogo);
+        var resultado = await dialogo.Result;
+        return resultado is { Canceled: false, Data: string motivo } ? motivo : null;
+    }
+
+    private async Task EjecutarAsync(Task<Resultado> accion, string mensajeExito)
+    {
+        ocupado = true;
+        var resultado = await accion;
+        ocupado = false;
+
+        Snackbar.Add(
+            resultado.Exito ? mensajeExito : string.Join(" ", resultado.Errores),
+            resultado.Exito ? Severity.Success : Severity.Error);
+
+        await CargarAsync();
+    }
+
+    private static string EtiquetaResolucion(EstadoPago estado) => estado switch
+    {
+        EstadoPago.Validado => "Validado",
+        EstadoPago.Rechazado => "Rechazado",
+        EstadoPago.PagadoEnConsultorio => "Cobrado",
+        EstadoPago.Anulado => "Anulado",
+        _ => "Resuelto",
+    };
+
+    private static string DescribirEvento(EventoAuditoria evento)
+    {
+        var estado = Enum.TryParse<EstadoPago>(evento.EstadoNuevo, out var valor) ? Formato.Estado(valor) : evento.EstadoNuevo;
+        return evento.Accion == AccionAuditoria.Creado
+            ? $"Registró el pago ({estado})"
+            : $"Cambió el estado a {estado}";
+    }
+}

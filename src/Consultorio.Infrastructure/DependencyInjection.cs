@@ -3,12 +3,15 @@ using Consultorio.Application.Auditoria;
 using Consultorio.Application.Comun;
 using Consultorio.Application.Cuenta;
 using Consultorio.Application.Pacientes;
+using Consultorio.Application.Pagos;
 using Consultorio.Application.Usuarios;
 using Consultorio.Domain.Pacientes;
+using Consultorio.Infrastructure.Archivos;
 using Consultorio.Infrastructure.Auditoria;
 using Consultorio.Infrastructure.Comun;
 using Consultorio.Infrastructure.Identidad;
 using Consultorio.Infrastructure.Pacientes;
+using Consultorio.Infrastructure.Pagos;
 using Consultorio.Infrastructure.Persistencia;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -71,6 +74,11 @@ public static class DependencyInjection
         services.AddScoped<FabricaContextos>();
         services.AddScoped<IRepositorioPacientes, RepositorioPacientes>();
         services.AddScoped<IConsultaAuditoria, ConsultaAuditoria>();
+        services.AddScoped<IRepositorioPagos, RepositorioPagos>();
+        services.AddScoped<IRepositorioConfiguracionPagos, RepositorioConfiguracionPagos>();
+
+        services.AddSingleton(LeerOpcionesArchivos(configuration));
+        services.AddSingleton<IAlmacenArchivos, AlmacenArchivosDisco>();
 
         services.Configure<OpcionesBaseDatos>(configuration.GetSection(OpcionesBaseDatos.Seccion));
         services.Configure<OpcionesUsuarioInicial>(configuration.GetSection(OpcionesUsuarioInicial.Seccion));
@@ -92,5 +100,18 @@ public static class DependencyInjection
         }
 
         return new OpcionesProteccionDatos { VersionPoliticaPrivacidad = version };
+    }
+
+    /// <summary>Lee la sección "Archivos". Sin ella no se sabría dónde guardar las capturas de pago.</summary>
+    private static OpcionesArchivos LeerOpcionesArchivos(IConfiguration configuration)
+    {
+        var ruta = configuration.GetSection(OpcionesArchivos.Seccion).Get<OpcionesArchivos>()?.RutaBase?.Trim();
+        if (string.IsNullOrEmpty(ruta))
+        {
+            throw new InvalidOperationException(
+                $"Configura '{OpcionesArchivos.Seccion}:RutaBase' (carpeta fuera de wwwroot donde se guardan los archivos subidos).");
+        }
+
+        return new OpcionesArchivos { RutaBase = ruta };
     }
 }

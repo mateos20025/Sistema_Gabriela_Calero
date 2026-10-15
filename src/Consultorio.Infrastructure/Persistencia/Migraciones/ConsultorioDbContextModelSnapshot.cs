@@ -109,6 +109,187 @@ namespace Consultorio.Infrastructure.Persistencia.Migraciones
                         });
                 });
 
+            modelBuilder.Entity("Consultorio.Domain.Pagos.ConfiguracionPagos", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("ActualizadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("actualizado_en");
+
+                    b.Property<string>("Banco")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("banco");
+
+                    b.Property<string>("ConceptoPredeterminado")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("concepto_predeterminado");
+
+                    b.Property<DateTime>("CreadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("creado_en");
+
+                    b.Property<string>("IdentificacionTitular")
+                        .HasMaxLength(13)
+                        .HasColumnType("character varying(13)")
+                        .HasColumnName("identificacion_titular");
+
+                    b.Property<string>("NumeroCuenta")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("numero_cuenta");
+
+                    b.Property<decimal?>("PrecioConsulta")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)")
+                        .HasColumnName("precio_consulta");
+
+                    b.Property<string>("TipoCuenta")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("tipo_cuenta");
+
+                    b.Property<string>("Titular")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("titular");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_configuracion_pagos");
+
+                    b.ToTable("configuracion_pagos", (string)null);
+                });
+
+            modelBuilder.Entity("Consultorio.Domain.Pagos.Pago", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("ActualizadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("actualizado_en");
+
+                    b.Property<Guid?>("CitaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("cita_id");
+
+                    b.Property<string>("ComprobanteArchivoId")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("comprobante_archivo_id");
+
+                    b.Property<string>("ComprobanteHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("comprobante_hash");
+
+                    b.Property<long?>("ComprobanteTamanoBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("comprobante_tamano_bytes");
+
+                    b.Property<string>("ComprobanteTipo")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("comprobante_tipo");
+
+                    b.Property<string>("Concepto")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("concepto");
+
+                    b.Property<DateTime>("CreadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("creado_en");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("estado");
+
+                    b.Property<string>("Metodo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("metodo");
+
+                    b.Property<decimal>("Monto")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)")
+                        .HasColumnName("monto");
+
+                    b.Property<string>("MotivoResolucion")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("motivo_resolucion");
+
+                    b.Property<string>("NumeroComprobante")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("numero_comprobante");
+
+                    b.Property<Guid>("PacienteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("paciente_id");
+
+                    b.Property<Guid>("RegistradoPorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("registrado_por_id");
+
+                    b.Property<DateTime?>("ResueltoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("resuelto_en");
+
+                    b.Property<Guid?>("ResueltoPorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("resuelto_por_id");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_pagos");
+
+                    b.HasIndex("ComprobanteHash")
+                        .IsUnique()
+                        .HasDatabaseName("ux_pagos_comprobante_hash_vigente")
+                        .HasFilter("comprobante_hash IS NOT NULL AND estado <> 'Anulado'");
+
+                    b.HasIndex("PacienteId")
+                        .HasDatabaseName("ix_pagos_paciente_id");
+
+                    b.HasIndex("RegistradoPorId")
+                        .HasDatabaseName("ix_pagos_registrado_por_id");
+
+                    b.HasIndex("ResueltoPorId")
+                        .HasDatabaseName("ix_pagos_resuelto_por_id");
+
+                    b.HasIndex("Estado", "CreadoEn")
+                        .HasDatabaseName("ix_pagos_estado_creado_en");
+
+                    b.ToTable("pagos", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_pagos_monto", "monto > 0");
+
+                            t.HasCheckConstraint("ck_pagos_transferencia_con_comprobante", "metodo <> 'Transferencia' OR comprobante_hash IS NOT NULL");
+                        });
+                });
+
             modelBuilder.Entity("Consultorio.Infrastructure.Auditoria.RegistroAuditoria", b =>
                 {
                     b.Property<Guid>("Id")
@@ -143,6 +324,11 @@ namespace Consultorio.Infrastructure.Persistencia.Migraciones
                     b.Property<Guid>("EntidadId")
                         .HasColumnType("uuid")
                         .HasColumnName("entidad_id");
+
+                    b.Property<string>("EstadoNuevo")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("estado_nuevo");
 
                     b.Property<Guid?>("UsuarioId")
                         .HasColumnType("uuid")
@@ -475,6 +661,29 @@ namespace Consultorio.Infrastructure.Persistencia.Migraciones
                         .HasName("pk_usuario_tokens");
 
                     b.ToTable("usuario_tokens", (string)null);
+                });
+
+            modelBuilder.Entity("Consultorio.Domain.Pagos.Pago", b =>
+                {
+                    b.HasOne("Consultorio.Domain.Pacientes.Paciente", null)
+                        .WithMany()
+                        .HasForeignKey("PacienteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_pagos_pacientes_paciente_id");
+
+                    b.HasOne("Consultorio.Infrastructure.Identidad.Usuario", null)
+                        .WithMany()
+                        .HasForeignKey("RegistradoPorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_pagos_usuarios_registrado_por_id");
+
+                    b.HasOne("Consultorio.Infrastructure.Identidad.Usuario", null)
+                        .WithMany()
+                        .HasForeignKey("ResueltoPorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_pagos_usuarios_resuelto_por_id");
                 });
 
             modelBuilder.Entity("Consultorio.Infrastructure.Auditoria.RegistroAuditoria", b =>

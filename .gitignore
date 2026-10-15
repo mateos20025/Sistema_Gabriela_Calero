@@ -10,6 +10,9 @@
 logs/
 claves/
 
+# Archivos subidos (capturas de pago): contienen datos personales, nunca al repositorio
+almacen/
+
 # User-specific files
 *.rsuser
 *.suo

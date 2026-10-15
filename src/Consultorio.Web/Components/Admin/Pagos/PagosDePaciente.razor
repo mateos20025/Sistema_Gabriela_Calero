@@ -1,0 +1,84 @@
+@inject ListarPagosDePaciente Listar
+@inject IDialogService Dialogos
+@inject ISnackbar Snackbar
+
+@* Bloque "Pagos" de la ficha del paciente. *@
+
+<MudCard Outlined="true">
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6">Pagos</MudText>
+        </CardHeaderContent>
+        <CardHeaderActions>
+            @if (Habilitado)
+            {
+                <MudButton Variant="Variant.Text" Color="Color.Primary" StartIcon="@Icons.Material.Filled.AddCard" OnClick="RegistrarAsync">
+                    Registrar pago
+                </MudButton>
+            }
+        </CardHeaderActions>
+    </MudCardHeader>
+    <MudCardContent>
+        @if (pagos is null)
+        {
+            <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+        }
+        else if (pagos.Count == 0)
+        {
+            <MudText Class="mud-text-secondary">Sin pagos registrados.</MudText>
+        }
+        else
+        {
+            <MudSimpleTable Dense="true" Hover="true" Elevation="0">
+                <thead><tr><th>Fecha</th><th>Concepto</th><th>Método</th><th style="text-align:right">Monto</th><th>Estado</th></tr></thead>
+                <tbody>
+                    @foreach (var pago in pagos)
+                    {
+                        <tr>
+                            <td><MudLink Href="@RutasPanel.Pago(pago.Id)">@Formato.FechaHora(pago.CreadoUtc)</MudLink></td>
+                            <td>@pago.Concepto</td>
+                            <td>@Formato.Metodo(pago.Metodo)</td>
+                            <td style="text-align:right">@Formato.Moneda(pago.Monto)</td>
+                            <td><ChipEstadoPago Estado="pago.Estado" /></td>
+                        </tr>
+                    }
+                </tbody>
+            </MudSimpleTable>
+        }
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Parameter, EditorRequired]
+    public Guid PacienteId { get; set; }
+
+    [Parameter, EditorRequired]
+    public string NombrePaciente { get; set; } = "";
+
+    /// <summary>A un paciente deshabilitado no se le registran pagos.</summary>
+    [Parameter]
+    public bool Habilitado { get; set; }
+
+    private IReadOnlyList<PagoResumen>? pagos;
+
+    protected override async Task OnParametersSetAsync() =>
+        pagos = await Listar.EjecutarAsync(PacienteId, CancellationToken.None);
+
+    private async Task RegistrarAsync()
+    {
+        var parametros = new DialogParameters<DialogoRegistrarPago>
+        {
+            { d => d.PacienteId, PacienteId },
+            { d => d.PacienteNombre, NombrePaciente },
+        };
+        var opciones = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, BackdropClick = false };
+        var dialogo = await Dialogos.ShowAsync<DialogoRegistrarPago>("Registrar pago", parametros, opciones);
+        var resultado = await dialogo.Result;
+
+        if (resultado is { Canceled: false })
+        {
+            Snackbar.Add("Pago registrado.", Severity.Success);
+            pagos = await Listar.EjecutarAsync(PacienteId, CancellationToken.None);
+        }
+    }
+}

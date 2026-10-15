@@ -1,0 +1,68 @@
+@inject IJSRuntime JS
+@inject ISnackbar Snackbar
+
+@* Cuenta para transferencias, con un botón para copiarla y pegarla en un mensaje al paciente. *@
+
+@if (Configuracion is null)
+{
+    @* Todavía cargando. *@
+}
+else if (Configuracion.TieneDatosBancarios)
+{
+    <MudPaper Outlined="true" Class="pa-4 mb-4">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap">
+            <div>
+                <MudText Typo="Typo.subtitle2" Class="mb-1">Cuenta para transferencias</MudText>
+                <MudText Typo="Typo.body2">
+                    @Configuracion.Banco · Cuenta de @Formato.TipoCuenta(Configuracion.TipoCuenta) N.º @Configuracion.NumeroCuenta
+                </MudText>
+                <MudText Typo="Typo.body2" Class="mud-text-secondary">
+                    Titular: @Configuracion.Titular · @Configuracion.IdentificacionTitular
+                    @if (Configuracion.PrecioConsulta is { } precio)
+                    {
+                        <span> · Consulta: @Formato.Moneda(precio)</span>
+                    }
+                </MudText>
+            </div>
+            <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick="CopiarAsync">Copiar datos</MudButton>
+        </MudStack>
+    </MudPaper>
+}
+else
+{
+    <MudAlert Severity="Severity.Info" Class="mb-4">
+        Todavía no se registró la cuenta para transferencias.
+        <AuthorizeView Roles="@Roles.Doctora">
+            <Authorized>
+                <MudLink Href="@RutasPanel.AjustesPagos">Configúrala aquí.</MudLink>
+            </Authorized>
+            <NotAuthorized>Pídele a la doctora que la configure.</NotAuthorized>
+        </AuthorizeView>
+    </MudAlert>
+}
+
+@code {
+    [Parameter]
+    public ConfiguracionPagosVista? Configuracion { get; set; }
+
+    private async Task CopiarAsync()
+    {
+        var c = Configuracion!;
+        var texto = string.Join(Environment.NewLine,
+            $"Banco: {c.Banco}",
+            $"Tipo de cuenta: {Formato.TipoCuenta(c.TipoCuenta)}",
+            $"Número de cuenta: {c.NumeroCuenta}",
+            $"Titular: {c.Titular}",
+            $"Cédula/RUC: {c.IdentificacionTitular}");
+
+        try
+        {
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", texto);
+            Snackbar.Add("Datos de la cuenta copiados.", Severity.Info);
+        }
+        catch (JSException)
+        {
+            Snackbar.Add("No se pudo copiar automáticamente. Selecciona el texto y cópialo a mano.", Severity.Warning);
+        }
+    }
+}

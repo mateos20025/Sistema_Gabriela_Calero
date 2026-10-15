@@ -19,6 +19,13 @@ public enum AccionAuditoria
 
 /// <summary>
 /// Un cambio registrado. Solo guarda QUÉ campos cambiaron, no sus valores anteriores, para no
-/// acumular copias de datos personales (minimización de la LOPDP).
+/// acumular copias de datos personales (minimización de la LOPDP). La excepción es
+/// <see cref="EstadoNuevo"/>: el estado (de un pago o una cita) no es un dato personal y sí es
+/// lo más importante del historial ("validó", "rechazó"...).
 /// </summary>
-public sealed record EventoAuditoria(DateTime FechaUtc, string Usuario, AccionAuditoria Accion, IReadOnlyList<string> Campos);
+public sealed record EventoAuditoria(
+    DateTime FechaUtc,
+    string Usuario,
+    AccionAuditoria Accion,
+    IReadOnlyList<string> Campos,
+    string? EstadoNuevo = null);
