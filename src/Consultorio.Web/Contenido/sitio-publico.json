@@ -1,0 +1,92 @@
+{
+  "SitioPublico": {
+    "Lema": "Tu salud es nuestra labor",
+    "Especialidades": [ "Ginecología", "Obstetricia", "Colposcopía" ],
+    "Presentacion": "Ginecología, obstetricia y colposcopía en Quito y Tumbaco. Atención cercana para cuidar tu salud en cada etapa de tu vida.",
+    "Biografia": [
+      "Soy ginecóloga y obstetra. Atiendo en Quito y en Tumbaco a mujeres en cada etapa de su vida: desde la primera consulta ginecológica hasta el control de su embarazo.",
+      "Creo en la prevención: detectar a tiempo, explicar con claridad y acompañarte con calidez para que tomes las mejores decisiones sobre tu salud."
+    ],
+    "FotoPrincipal": "img/sitio/doctora-principal.jpg",
+    "FotoConsultorio": "img/sitio/doctora-consultorio.jpg",
+    "FotoAgenda": "img/sitio/doctora-perfil.jpg",
+    "Logo": "img/sitio/logo-emblema.png",
+    "LogoCompleto": "img/sitio/logo-completo.png",
+    "Contacto": {
+      "WhatsApp": "096 005 7144",
+      "MensajeWhatsApp": "Hola, quisiera información para agendar una cita con la Dra. Viviana Calero.",
+      "Instagram": "https://www.instagram.com/dra.vivianagabrielacalero/",
+      "Facebook": "",
+      "TikTok": ""
+    },
+    "Pilares": [
+      { "Icono": "prevenir", "Titulo": "Previene", "Descripcion": "La prevención hoy es bienestar mañana: chequeos a tiempo." },
+      { "Icono": "escuchar", "Titulo": "Escucha", "Descripcion": "Un espacio de confianza para resolver todas tus dudas." },
+      { "Icono": "acompanar", "Titulo": "Acompaña", "Descripcion": "Contigo en cada etapa: adolescencia, embarazo y madurez." },
+      { "Icono": "bienestar", "Titulo": "Tu bienestar", "Descripcion": "Es nuestra prioridad en cada consulta." }
+    ],
+    "Servicios": [
+      {
+        "Icono": "ginecologia",
+        "Titulo": "Consulta ginecológica",
+        "Descripcion": "Chequeo integral de tu salud íntima: prevención, diagnóstico y tratamiento en cada etapa de tu vida."
+      },
+      {
+        "Icono": "embarazo",
+        "Titulo": "Control prenatal",
+        "Descripcion": "Te acompaño mes a mes para que tú y tu bebé estén bien en cada etapa, con chequeos en cada trimestre."
+      },
+      {
+        "Icono": "colposcopia",
+        "Titulo": "Colposcopía",
+        "Descripcion": "Examen del cuello uterino que permite detectar cambios a tiempo, antes de que aparezcan síntomas."
+      },
+      {
+        "Icono": "papanicolaou",
+        "Titulo": "Papanicolaou",
+        "Descripcion": "Prueba sencilla para detectar a tiempo el cáncer de cuello uterino. Detectarlo temprano hace la diferencia."
+      },
+      {
+        "Icono": "anticoncepcion",
+        "Titulo": "Anticoncepción",
+        "Descripcion": "Asesoría para elegir el método ideal para ti, incluidas la T de cobre (sin hormonas) y la T hormonal Mirena."
+      },
+      {
+        "Icono": "fertilidad",
+        "Titulo": "Asesoría de fertilidad",
+        "Descripcion": "¿Sueñas con ser mamá? Descubre qué necesita tu cuerpo y recibe un plan hecho para ti."
+      },
+      {
+        "Icono": "rejuvenecimiento",
+        "Titulo": "Rejuvenecimiento vaginal",
+        "Descripcion": "Tratamiento con tecnología Fraxx. En la consulta evaluamos si es adecuado para ti."
+      },
+      {
+        "Icono": "paquete",
+        "Titulo": "Paquete ginecológico",
+        "Descripcion": "Una revisión completa para cuidar tu salud en una sola visita.",
+        "Incluye": [
+          "Consulta ginecológica",
+          "Examen físico mamario",
+          "Toma de papanicolaou",
+          "Revisión de resultados",
+          "Asesoría de métodos anticonceptivos"
+        ]
+      }
+    ],
+    "Consultorios": [
+      {
+        "Ciudad": "Quito",
+        "Lugar": "Edificio Asoma",
+        "Direccion": "Voz Andes y Av. América, 4.º piso, oficina 4A",
+        "UrlMapa": ""
+      },
+      {
+        "Ciudad": "Tumbaco",
+        "Lugar": "Clínica de Especialidades Tumbaco",
+        "Direccion": "",
+        "UrlMapa": ""
+      }
+    ]
+  }
+}

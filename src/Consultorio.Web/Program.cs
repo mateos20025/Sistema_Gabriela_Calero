@@ -7,6 +7,7 @@ using Consultorio.Web.Components;
 using Consultorio.Web.Configuracion;
 using Consultorio.Web.Seguridad;
 using Consultorio.Web.Tareas;
+using Microsoft.Extensions.Options;
 using MudBlazor.Services;
 using Serilog;
 
@@ -21,6 +22,10 @@ try
     CultureInfo.DefaultThreadCurrentUICulture = culturaEcuador;
 
     var builder = WebApplication.CreateBuilder(args);
+
+    // Contenido de la página pública (textos, servicios, consultorios, redes). Se edita sin tocar el código
+    // y los cambios se aplican sin reiniciar la app.
+    builder.Configuration.AddJsonFile(Path.Combine("Contenido", "sitio-publico.json"), optional: false, reloadOnChange: true);
 
     builder.Services.AddSerilog((servicios, configuracion) => configuracion
         .ReadFrom.Configuration(builder.Configuration)
@@ -39,6 +44,11 @@ try
         .Bind(builder.Configuration.GetSection(OpcionesConsultorio.Seccion))
         .ValidateDataAnnotations()
         .ValidateOnStart();
+
+    builder.Services.AddOptions<OpcionesSitioPublico>()
+        .Bind(builder.Configuration.GetSection(OpcionesSitioPublico.Seccion))
+        .ValidateOnStart();
+    builder.Services.AddSingleton<IValidateOptions<OpcionesSitioPublico>, ValidadorOpcionesSitioPublico>();
 
     builder.Services.Configure<OpcionesPoliticaPrivacidad>(builder.Configuration.GetSection(OpcionesPoliticaPrivacidad.Seccion));
     builder.Services.AddSingleton<PoliticaPrivacidad>();

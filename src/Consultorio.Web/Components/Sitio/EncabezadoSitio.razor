@@ -1,0 +1,47 @@
+@inject IOptions<OpcionesConsultorio> Consultorio
+@inject IOptionsMonitor<OpcionesSitioPublico> Sitio
+
+<header class="sitio-encabezado">
+    <div class="sitio-contenedor sitio-encabezado-fila">
+        <a href="/" class="marca" aria-label="Inicio">
+            <EmblemaMarca />
+            <span class="marca-texto">
+                <strong>@Consultorio.Value.Nombre</strong>
+                <small>@string.Join(" | ", Sitio.CurrentValue.Especialidades)</small>
+            </span>
+        </a>
+
+        <nav class="sitio-nav" aria-label="Secciones">
+            @foreach (var (texto, destino) in Enlaces)
+            {
+                <a href="@destino">@texto</a>
+            }
+        </nav>
+
+        <div class="sitio-encabezado-acciones">
+            <a href="@RutasPublicas.SolicitarCita" class="boton boton-rosa boton-chico">Agendar cita</a>
+
+            @* Menú del celular sin JavaScript: <details> se abre y se cierra solo. *@
+            <details class="menu-movil">
+                <summary aria-label="Abrir menú"><MudIcon Icon="@Icons.Material.Filled.Menu" /></summary>
+                <nav aria-label="Secciones">
+                    @foreach (var (texto, destino) in Enlaces)
+                    {
+                        <a href="@destino">@texto</a>
+                    }
+                    <a href="@RutasPublicas.SolicitarCita" class="boton boton-rosa">Agendar cita</a>
+                </nav>
+            </details>
+        </div>
+    </div>
+</header>
+
+@code {
+    private static readonly (string Texto, string Destino)[] Enlaces =
+    [
+        ("Servicios", "/#servicios"),
+        ("Sobre mí", "/#sobre-mi"),
+        ("Cómo agendar", "/#como-agendar"),
+        ("Consultorios", "/#consultorios"),
+    ];
+}

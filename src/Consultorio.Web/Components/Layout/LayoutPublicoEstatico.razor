@@ -1,9 +1,8 @@
 @inherits LayoutComponentBase
 @inject NavigationManager Navegacion
-@inject IOptions<OpcionesConsultorio> Consultorio
 
-@* Diseño de las páginas públicas con formularios (solicitar cita, privacidad). Se generan en el
-   servidor como HTML normal: funcionan sin conexión permanente, con el captcha y el límite de envíos. *@
+@* Diseño del sitio público (inicio, solicitar cita, privacidad). Se genera en el servidor como HTML normal:
+   carga rápido, lo leen los buscadores y funciona con el captcha y el límite de envíos. *@
 
 <MudThemeProvider Theme="TemaConsultorio.Tema" />
 
@@ -13,19 +12,16 @@
 }
 else
 {
-    <MudLayout>
-        <MudAppBar Elevation="0">
-            <a href="/" class="publico-marca" data-enhance-nav="false">
-                <MudIcon Icon="@Icons.Material.Filled.LocalHospital" Class="mr-2" />
-                <MudText Typo="Typo.h6">@Consultorio.Value.Nombre</MudText>
-            </a>
-        </MudAppBar>
-        <MudMainContent>
-            <MudContainer MaxWidth="MaxWidth.Medium" Class="py-8">
-                @Body
-            </MudContainer>
-        </MudMainContent>
-    </MudLayout>
+    @* data-enhance-nav="false": cada enlace carga la página completa (lo necesita el captcha de "Solicitar cita"). *@
+    <div class="sitio" data-enhance-nav="false">
+        <a href="#contenido" class="saltar-al-contenido">Saltar al contenido</a>
+        <EncabezadoSitio />
+        <main id="contenido">
+            @Body
+        </main>
+        <PieSitio />
+        <BotonWhatsapp />
+    </div>
 }
 
 @code {

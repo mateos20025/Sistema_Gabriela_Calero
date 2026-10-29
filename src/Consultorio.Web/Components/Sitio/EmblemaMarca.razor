@@ -1,0 +1,23 @@
+@inject IOptionsMonitor<OpcionesSitioPublico> Sitio
+
+@* Emblema de la marca. Si se configura un logotipo (SitioPublico:Logo) se usa la imagen. *@
+
+@if (string.IsNullOrWhiteSpace(Sitio.CurrentValue.Logo))
+{
+    <span class="emblema @(Claro ? "emblema-claro" : "")" style="--emblema-tamano:@(Tamano)px" aria-hidden="true">
+        <MudIcon Icon="@Icons.Material.Outlined.PregnantWoman" />
+    </span>
+}
+else
+{
+    <img class="emblema-logo" src="@Sitio.CurrentValue.Logo" alt="" width="@Tamano" height="@Tamano" style="--emblema-tamano:@(Tamano)px" />
+}
+
+@code {
+    [Parameter]
+    public int Tamano { get; set; } = 56;
+
+    /// <summary>Versión para fondos oscuros (pie de página).</summary>
+    [Parameter]
+    public bool Claro { get; set; }
+}

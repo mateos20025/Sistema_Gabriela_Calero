@@ -219,6 +219,20 @@ public class AgendaTests
     }
 
     [Fact]
+    public async Task El_horario_publico_va_de_lunes_a_domingo_y_esta_vacio_sin_configurar()
+    {
+        var sinConfigurar = await new ObtenerHorarioPublico(new RepositorioAgendaEnMemoria()).EjecutarAsync(CancellationToken.None);
+        Assert.Empty(sinConfigurar);
+
+        var agenda = DatosCitas.AgendaConfigurada();
+        agenda.Franjas.Add(FranjaAtencion.Crear(DayOfWeek.Sunday, new TimeOnly(8, 0), new TimeOnly(10, 0)));
+
+        var horario = await new ObtenerHorarioPublico(agenda).EjecutarAsync(CancellationToken.None);
+
+        Assert.Equal([DayOfWeek.Monday, DayOfWeek.Sunday], horario.Select(f => f.DiaSemana));
+    }
+
+    [Fact]
     public async Task Sin_configurar_la_disponibilidad_del_panel_es_nula()
     {
         var agenda = new RepositorioAgendaEnMemoria();

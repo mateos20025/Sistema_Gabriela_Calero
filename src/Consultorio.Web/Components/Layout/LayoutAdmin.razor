@@ -8,10 +8,16 @@
 <MudSnackbarProvider />
 
 <MudLayout>
-    <MudAppBar Elevation="1">
+    <MudAppBar Elevation="0" Class="barra-panel">
         <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start"
                        OnClick="() => menuAbierto = !menuAbierto" aria-label="Abrir o cerrar el menú" />
-        <MudText Typo="Typo.h6" Class="ml-2">@Consultorio.Value.NombreCorto</MudText>
+        <a href="@RutasCuenta.Panel" class="marca ml-2">
+            <EmblemaMarca Tamano="44" />
+            <span class="marca-texto d-none d-sm-flex">
+                <strong>@Consultorio.Value.NombreCorto</strong>
+                <small>@Consultorio.Value.Nombre</small>
+            </span>
+        </a>
         <MudSpacer />
 
         <AuthorizeView>
@@ -33,7 +39,7 @@
         </form>
     </MudAppBar>
 
-    <MudDrawer @bind-Open="menuAbierto" ClipMode="DrawerClipMode.Always" Elevation="1" Variant="DrawerVariant.Responsive">
+    <MudDrawer @bind-Open="menuAbierto" ClipMode="DrawerClipMode.Always" Elevation="0" Variant="DrawerVariant.Responsive" Class="menu-panel">
         <MudNavMenu Class="mt-2">
             <MudNavLink Href="@RutasCuenta.Panel" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard">Inicio</MudNavLink>
             <MudNavLink Href="@RutasPanel.Agenda" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.CalendarMonth">Agenda</MudNavLink>

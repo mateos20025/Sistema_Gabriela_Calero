@@ -1,0 +1,98 @@
+@inject IOptions<OpcionesConsultorio> Consultorio
+@inject IOptionsMonitor<OpcionesSitioPublico> Sitio
+@inject ObtenerHorarioPublico ObtenerHorario
+@inject IRelojSistema Reloj
+
+<footer class="sitio-pie">
+    <div class="sitio-contenedor sitio-pie-columnas">
+        <div>
+            <div class="marca marca-clara">
+                <EmblemaMarca Claro="true" />
+                <span class="marca-texto">
+                    <strong>@Consultorio.Value.Nombre</strong>
+                    <small>@string.Join(" | ", Contenido.Especialidades)</small>
+                </span>
+            </div>
+            @if (!string.IsNullOrWhiteSpace(Contenido.Lema))
+            {
+                <p class="sitio-pie-lema">@Contenido.Lema</p>
+            }
+        </div>
+
+        <div>
+            <h2>Contacto</h2>
+            <ul>
+                <li>
+                    <a href="@EnlacesSitio.WhatsApp(Contenido.Contacto)" target="_blank" rel="noopener">
+                        <MudIcon Icon="@Icons.Custom.Brands.WhatsApp" Size="Size.Small" /> @Formato.Telefono(EnlacesSitio.WhatsAppE164(Contenido.Contacto))
+                    </a>
+                </li>
+                @foreach (var (red, enlace, icono) in Redes)
+                {
+                    <li>
+                        <a href="@enlace" target="_blank" rel="noopener"><MudIcon Icon="@icono" Size="Size.Small" /> @red</a>
+                    </li>
+                }
+            </ul>
+        </div>
+
+        <div>
+            <h2>Consultorios</h2>
+            <ul>
+                @foreach (var consultorio in Contenido.Consultorios)
+                {
+                    <li>
+                        <a href="@EnlacesSitio.Mapa(consultorio)" target="_blank" rel="noopener">
+                            <MudIcon Icon="@Icons.Material.Outlined.LocationOn" Size="Size.Small" />
+                            <span><strong>@consultorio.Ciudad</strong> · @consultorio.Lugar</span>
+                        </a>
+                    </li>
+                }
+            </ul>
+        </div>
+
+        <div>
+            <h2>Horario de atención</h2>
+            @if (horario.Count == 0)
+            {
+                <p>Escríbenos para conocer los horarios disponibles.</p>
+            }
+            else
+            {
+                <ul>
+                    @foreach (var linea in horario)
+                    {
+                        <li class="sitio-pie-horario"><strong>@linea.Dias</strong>@linea.Horas</li>
+                    }
+                </ul>
+            }
+        </div>
+    </div>
+
+    <div class="sitio-contenedor sitio-pie-final">
+        <span>© @Reloj.AhoraEcuador.Year @Consultorio.Value.Nombre</span>
+        <nav aria-label="Enlaces legales">
+            <a href="@RutasPublicas.Privacidad">Política de privacidad</a>
+            <a href="@RutasCuenta.Panel">Acceso del personal</a>
+        </nav>
+    </div>
+</footer>
+
+@code {
+    private IReadOnlyList<HorarioLegible.Linea> horario = [];
+
+    private OpcionesSitioPublico Contenido => Sitio.CurrentValue;
+
+    private IEnumerable<(string Red, string Enlace, string Icono)> Redes =>
+        new (string Red, string? Enlace, string Icono)[]
+        {
+            ("Instagram", Contenido.Contacto.Instagram, Icons.Custom.Brands.Instagram),
+            ("Facebook", Contenido.Contacto.Facebook, Icons.Custom.Brands.Facebook),
+            ("TikTok", Contenido.Contacto.TikTok, Icons.Custom.Brands.TikTok),
+        }
+        .Where(r => !string.IsNullOrWhiteSpace(r.Enlace))
+        .Select(r => (r.Red, r.Enlace!, r.Icono));
+
+    protected override async Task OnInitializedAsync() =>
+        horario = HorarioLegible.Agrupar(await ObtenerHorario.EjecutarAsync(CancellationToken.None));
+}

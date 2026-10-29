@@ -168,6 +168,17 @@ public sealed class ConsultarDisponibilidadPublica(MotorDisponibilidad motor, IR
     }
 }
 
+/// <summary>Caso de uso: horario semanal de atención para la página pública (no requiere sesión, no tiene datos personales).</summary>
+public sealed class ObtenerHorarioPublico(IRepositorioAgenda repositorio)
+{
+    /// <returns>Franjas ordenadas de lunes a domingo; vacío si la agenda no está configurada.</returns>
+    public async Task<IReadOnlyList<FranjaVista>> EjecutarAsync(CancellationToken cancellationToken)
+    {
+        var agenda = await repositorio.ObtenerAsync(cancellationToken);
+        return agenda is null ? [] : ConfiguracionAgendaVista.Desde(agenda).Franjas;
+    }
+}
+
 /// <summary>Caso de uso: agenda de uno a siete días (citas no canceladas, bloqueos y horario de atención).</summary>
 public sealed class ObtenerAgenda(IRepositorioAgenda repositorioAgenda, IRepositorioCitas repositorioCitas, IUsuarioActual usuarioActual)
 {

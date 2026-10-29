@@ -27,6 +27,7 @@ Todos los comandos se escriben en **Developer PowerShell** (o en el Símbolo del
 | Pacientes | Listo | Registro por cédula ecuatoriana con consentimiento de datos, búsqueda, edición, deshabilitar y habilitar, historial de cambios (solo la doctora). |
 | Pagos | Listo | Transferencias con captura (validar o rechazar), efectivo en el consultorio, anulación, detección de capturas repetidas, cuenta bancaria y precio sugerido (los define la doctora). Un pago puede asociarse a una cita. |
 | Citas y agenda | Listo | Solicitud de cita en línea (con captcha y consentimiento), cola de llamadas, confirmación, reprogramación, cancelación, agenda diaria y semanal, horario de atención y bloqueos (los define la doctora), historial de cada cita. |
+| Sitio público y diseño | Listo | Página de inicio con la identidad de la doctora (turquesa y rosa, tipografía Poppins, fotos reales): servicios, sobre mí, cómo agendar, consultorios, horario real de la agenda y botón de WhatsApp. El panel usa los mismos colores. |
 | WhatsApp, Historia clínica | Pendiente | |
 
 Direcciones (con la app corriendo):
@@ -321,6 +322,7 @@ docker exec -it consultorio-db psql -U consultorio -d consultorio
 | "La captura debe ser una imagen JPG o PNG, o un PDF" | El archivo no es realmente una imagen o un PDF (aunque su nombre termine en .png). | Pide al paciente una captura de pantalla o el PDF que entrega el banco. |
 | "Esta captura ya se registró el ..." | Esa misma captura ya está en otro pago vigente. | Revisa el pago indicado; si fue un error, anúlalo y vuelve a registrar. |
 | `Configura 'Archivos:RutaBase'` | Falta la carpeta donde se guardan las capturas. | Revisa `src/Consultorio.Web/appsettings.json`. |
+| `SitioPublico: ...` al arrancar | Falta un dato o hay un error en `Contenido/sitio-publico.json` (por ejemplo, una coma de más). | Corrige lo que indica el mensaje; si el error es de formato, revisa comas y comillas del archivo. |
 
 ---
 
@@ -338,9 +340,18 @@ Se define en `src/Consultorio.Web/appsettings.json`; en producción se puede sob
 | `DataProtection:RutaClaves` | Carpeta donde se guardan las claves que cifran las sesiones (necesaria en producción con Docker). |
 | `ProteccionDatos:RutaPoliticaPrivacidad` | Archivo de texto con la política de privacidad que se muestra en `/privacidad` (relativo a `src/Consultorio.Web` o ruta completa). En desarrollo apunta a la plantilla `Contenido/politica-privacidad.plantilla.txt`. Sin este archivo no se reciben solicitudes en línea. Formato: `## ` para títulos, `- ` para listas, línea en blanco entre párrafos. |
 | `Turnstile:ClaveSitio` y `Turnstile:ClaveSecreta` | Captcha de Cloudflare Turnstile del formulario público. En desarrollo se usan las claves de prueba públicas de Cloudflare (siempre aprueban). En producción, la clave secreta va **solo** en la variable de entorno `Turnstile__ClaveSecreta`. Fuera de desarrollo, sin claves no se reciben solicitudes en línea. |
+| `SitioPublico:*` (archivo `src/Consultorio.Web/Contenido/sitio-publico.json`) | Contenido de la página de inicio: lema, especialidades, presentación, biografía, fotos, WhatsApp, redes sociales, pilares, servicios y consultorios. Se edita ese archivo y el cambio se ve al recargar la página, sin reiniciar. Si un dato obligatorio falta o un enlace no es `https`, la app no arranca y el mensaje dice qué corregir. El horario de atención no se escribe aquí: sale de **Agenda → Configuración**. |
 | `Archivos:RutaBase` | Carpeta de las capturas de pago (por defecto `almacen`, dentro de `src/Consultorio.Web`). Está **fuera de `wwwroot`**: solo se pueden ver con sesión iniciada. Contiene datos personales: no se sube a GitHub y debe incluirse en los respaldos. |
 
 Si falta una clave obligatoria, la aplicación no arranca y el mensaje indica cuál es.
+
+**Contenido de la página de inicio** (`Contenido/sitio-publico.json`):
+
+- **Fotos**: van en `src/Consultorio.Web/wwwroot/img/sitio/` (JPG de unos 900 px de ancho y menos de 200 KB) y se indican con su ruta, por ejemplo `img/sitio/doctora-principal.jpg`. Las actuales salen de la sesión fotográfica de la doctora; no se usan fotos con menores.
+- **Íconos de servicios y pilares** (campo `Icono`): `ginecologia`, `embarazo`, `colposcopia`, `papanicolaou`, `anticoncepcion`, `fertilidad`, `rejuvenecimiento`, `paquete`, `prevenir`, `escuchar`, `acompanar`, `bienestar`.
+- **Logotipo**: `Logo` es el emblema cuadrado (luna y silueta) que se ve en el encabezado, el pie y el panel; `LogoCompleto` es el logo con el nombre, que se ve en el inicio de sesión. Ambos son PNG con fondo transparente en `wwwroot/img/sitio/`. El ícono de la pestaña del navegador está en `wwwroot/favicon.png` y `wwwroot/apple-touch-icon.png`. El archivo original del logo está en la carpeta `Material` (fuera del repositorio).
+- **Consultorios**: `UrlMapa` es opcional; si está vacío, el botón "Cómo llegar" busca el lugar y la dirección en Google Maps.
+- Los textos de biografía y servicios se redactaron a partir de su Instagram y sus flyers: **la doctora debe revisarlos** antes de publicar.
 
 **Antes de abrir las solicitudes en línea al público** (lo debe proporcionar la doctora):
 
@@ -366,7 +377,11 @@ src/
   Consultorio.Application/       Casos de uso, puertos (interfaces) y validadores
   Consultorio.Infrastructure/    EF Core + PostgreSQL, Identity, auditoría, migraciones
   Consultorio.Web/               Blazor: página pública, /citas/solicitar, /cuenta y panel /admin
-    Contenido/                   Plantilla de la política de privacidad
+    Contenido/                   Contenido del sitio (sitio-publico.json) y plantilla de la política de privacidad
+    Components/Sitio/            Encabezado, pie, emblema y botón de WhatsApp del sitio público
+    wwwroot/css/sitio.css        Estilos y colores de la marca del sitio público
+    wwwroot/img/sitio/           Fotos del sitio
+    wwwroot/fonts/poppins/       Tipografía Poppins (licencia OFL)
 tests/
   Consultorio.Domain.Tests/      Reglas del dominio (cédula, teléfono, paciente, pagos, citas y disponibilidad)
   Consultorio.Application.Tests/ Casos de uso y validadores

@@ -1,6 +1,7 @@
 @inherits LayoutComponentBase
 @inject NavigationManager Navegacion
 @inject IOptions<OpcionesConsultorio> Consultorio
+@inject IOptionsMonitor<OpcionesSitioPublico> Sitio
 
 <MudThemeProvider Theme="TemaConsultorio.Tema" />
 
@@ -12,11 +13,18 @@ else
 {
     <main class="cuenta-fondo">
         <div class="cuenta-contenedor">
-            <a href="/" class="cuenta-marca">
-                <MudIcon Icon="@Icons.Material.Filled.LocalHospital" Color="Color.Primary" />
-                <strong>@Consultorio.Value.Nombre</strong>
+            <a href="/" class="cuenta-marca" aria-label="@Consultorio.Value.Nombre">
+                @if (string.IsNullOrWhiteSpace(Sitio.CurrentValue.LogoCompleto))
+                {
+                    <EmblemaMarca />
+                    <strong>@Consultorio.Value.Nombre</strong>
+                }
+                else
+                {
+                    <img src="@Sitio.CurrentValue.LogoCompleto" alt="@Consultorio.Value.Nombre" class="cuenta-logo" width="720" height="378" />
+                }
             </a>
-            <MudPaper Elevation="2" Class="pa-6 pa-sm-8">
+            <MudPaper Elevation="0" Class="pa-6 pa-sm-8 cuenta-tarjeta">
                 @Body
             </MudPaper>
         </div>

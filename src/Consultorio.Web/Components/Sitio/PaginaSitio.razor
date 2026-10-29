@@ -1,0 +1,37 @@
+@* Marco de las páginas internas del sitio público: franja con el título y una tarjeta para el contenido. *@
+
+<section class="pagina-sitio-cabecera">
+    <div class="sitio-contenedor">
+        @if (!string.IsNullOrWhiteSpace(Etiqueta))
+        {
+            <span class="etiqueta">@Etiqueta</span>
+        }
+        <h1>@Titulo</h1>
+        @if (!string.IsNullOrWhiteSpace(Descripcion))
+        {
+            <p>@Descripcion</p>
+        }
+    </div>
+</section>
+
+<section class="pagina-sitio-cuerpo">
+    <div class="sitio-contenedor sitio-contenedor-angosto">
+        <div class="tarjeta-sitio">
+            @ChildContent
+        </div>
+    </div>
+</section>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Titulo { get; set; } = "";
+
+    [Parameter]
+    public string? Etiqueta { get; set; }
+
+    [Parameter]
+    public string? Descripcion { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}

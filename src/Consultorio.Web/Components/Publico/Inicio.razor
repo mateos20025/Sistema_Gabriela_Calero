@@ -1,0 +1,263 @@
+@page "/"
+@inject IOptions<OpcionesConsultorio> Consultorio
+@inject IOptionsMonitor<OpcionesSitioPublico> Sitio
+@inject ObtenerHorarioPublico ObtenerHorario
+
+<Titulo />
+<HeadContent>
+    <meta name="description" content="@Contenido.Presentacion" />
+</HeadContent>
+
+@* ---------- Portada ---------- *@
+<section class="hero">
+    <div class="sitio-contenedor hero-grid">
+        <div class="hero-texto">
+            @if (!string.IsNullOrWhiteSpace(Contenido.Lema))
+            {
+                <span class="etiqueta">@Contenido.Lema</span>
+            }
+            <h1 class="hero-titulo">@Consultorio.Value.Nombre</h1>
+            <p class="hero-subtitulo">@EspecialidadesEnTexto</p>
+            <p class="hero-descripcion">@Contenido.Presentacion</p>
+
+            <div class="hero-acciones">
+                <a href="@RutasPublicas.SolicitarCita" class="boton boton-rosa">
+                    <MudIcon Icon="@Icons.Material.Outlined.EventAvailable" Size="Size.Small" /> Agendar cita
+                </a>
+                <a href="@EnlacesSitio.WhatsApp(Contenido.Contacto)" class="boton boton-contorno" target="_blank" rel="noopener">
+                    <MudIcon Icon="@Icons.Custom.Brands.WhatsApp" Size="Size.Small" /> WhatsApp
+                </a>
+            </div>
+
+            <ul class="hero-datos">
+                <li>
+                    <span class="hero-dato-icono"><MudIcon Icon="@Icons.Material.Outlined.LocationOn" Size="Size.Small" /></span>
+                    <span><strong>@string.Join(" · ", Ciudades)</strong><small>Consultorios</small></span>
+                </li>
+                <li>
+                    <span class="hero-dato-icono"><MudIcon Icon="@Icons.Material.Outlined.CalendarMonth" Size="Size.Small" /></span>
+                    <span><strong>En línea</strong><small>Agenda tu cita</small></span>
+                </li>
+                <li>
+                    <span class="hero-dato-icono"><MudIcon Icon="@Icons.Custom.Brands.WhatsApp" Size="Size.Small" /></span>
+                    <span><strong>@Formato.Telefono(EnlacesSitio.WhatsAppE164(Contenido.Contacto))</strong><small>WhatsApp</small></span>
+                </li>
+            </ul>
+        </div>
+
+        <div class="hero-foto">
+            <div class="hero-foto-marco">
+                <img src="@Contenido.FotoPrincipal" alt="@Consultorio.Value.Nombre" width="900" height="1125" fetchpriority="high" />
+            </div>
+            <div class="hero-tarjeta-flotante">
+                <span class="hero-tarjeta-icono"><MudIcon Icon="@Icons.Material.Outlined.FavoriteBorder" Size="Size.Small" /></span>
+                <span><strong>Agenda en línea</strong><small>Elige tu día y hora</small></span>
+            </div>
+        </div>
+    </div>
+</section>
+
+@* ---------- Pilares de la marca ---------- *@
+@if (Contenido.Pilares.Count > 0)
+{
+    <section class="pilares">
+        <div class="sitio-contenedor pilares-grid">
+            @foreach (var pilar in Contenido.Pilares)
+            {
+                <article class="pilar">
+                    <span class="icono-circulo icono-turquesa"><MudIcon Icon="@IconosSitio.De(pilar.Icono)" /></span>
+                    <div>
+                        <h2>@pilar.Titulo</h2>
+                        <p>@pilar.Descripcion</p>
+                    </div>
+                </article>
+            }
+        </div>
+    </section>
+}
+
+@* ---------- Servicios ---------- *@
+<section id="servicios" class="seccion">
+    <div class="sitio-contenedor">
+        <header class="seccion-titulo">
+            <span class="etiqueta">Servicios</span>
+            <h2>Cuidamos tu salud en <span class="texto-rosa">cada etapa</span></h2>
+            <p>Atención ginecológica y obstétrica con calidez, desde la prevención hasta el control de tu embarazo.</p>
+        </header>
+
+        <div class="servicios-grid">
+            @for (var i = 0; i < Contenido.Servicios.Count; i++)
+            {
+                var servicio = Contenido.Servicios[i];
+                <article class="servicio">
+                    <span class="icono-circulo @(i % 2 == 0 ? "icono-turquesa" : "icono-rosa")"><MudIcon Icon="@IconosSitio.De(servicio.Icono)" /></span>
+                    <h3>@servicio.Titulo</h3>
+                    <p>@servicio.Descripcion</p>
+                    @if (servicio.Incluye.Count > 0)
+                    {
+                        <ul class="lista-check">
+                            @foreach (var item in servicio.Incluye)
+                            {
+                                <li><MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" /> @item</li>
+                            }
+                        </ul>
+                    }
+                    <a href="@RutasPublicas.SolicitarCita" class="servicio-enlace">
+                        Agendar <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Size="Size.Small" />
+                    </a>
+                </article>
+            }
+        </div>
+    </div>
+</section>
+
+@* ---------- Sobre mí ---------- *@
+<section id="sobre-mi" class="seccion seccion-blanca">
+    <div class="sitio-contenedor sobre-grid">
+        @if (!string.IsNullOrWhiteSpace(Contenido.FotoConsultorio))
+        {
+            <div class="sobre-foto">
+                <img src="@Contenido.FotoConsultorio" alt="@Consultorio.Value.Nombre en su consultorio" width="1100" height="880" loading="lazy" />
+            </div>
+        }
+        <div class="sobre-texto">
+            <span class="etiqueta">Sobre mí</span>
+            <h2>@Consultorio.Value.Nombre</h2>
+            @foreach (var parrafo in Contenido.Biografia)
+            {
+                <p>@parrafo</p>
+            }
+            <ul class="chips">
+                @foreach (var especialidad in Contenido.Especialidades)
+                {
+                    <li>@especialidad</li>
+                }
+            </ul>
+            <a href="@RutasPublicas.SolicitarCita" class="boton boton-turquesa">Agenda tu cita</a>
+        </div>
+    </div>
+</section>
+
+@* ---------- Cómo agendar ---------- *@
+<section id="como-agendar" class="seccion seccion-turquesa">
+    <div class="sitio-contenedor agendar-grid">
+        <div>
+            <span class="etiqueta etiqueta-clara">Agenda en línea</span>
+            <h2>Agenda tu cita en tres pasos</h2>
+            <ol class="pasos">
+                <li>
+                    <span class="paso-numero">1</span>
+                    <span><strong>Elige el día y la hora</strong>Solo ves los horarios realmente disponibles.</span>
+                </li>
+                <li>
+                    <span class="paso-numero">2</span>
+                    <span><strong>Te llamamos para confirmar</strong>Reservamos tu horario mientras nos comunicamos contigo.</span>
+                </li>
+                <li>
+                    <span class="paso-numero">3</span>
+                    <span><strong>Asiste a tu consulta</strong>En @string.Join(" o en ", Ciudades), en el consultorio que acuerdes al confirmar.</span>
+                </li>
+            </ol>
+            <div class="hero-acciones">
+                <a href="@RutasPublicas.SolicitarCita" class="boton boton-blanco">
+                    <MudIcon Icon="@Icons.Material.Outlined.EventAvailable" Size="Size.Small" /> Solicitar cita en línea
+                </a>
+                <a href="@EnlacesSitio.WhatsApp(Contenido.Contacto)" class="boton boton-contorno-claro" target="_blank" rel="noopener">
+                    <MudIcon Icon="@Icons.Custom.Brands.WhatsApp" Size="Size.Small" /> Prefiero WhatsApp
+                </a>
+            </div>
+        </div>
+        @if (!string.IsNullOrWhiteSpace(Contenido.FotoAgenda))
+        {
+            <div class="agendar-foto">
+                <img src="@Contenido.FotoAgenda" alt="" width="720" height="900" loading="lazy" />
+            </div>
+        }
+    </div>
+</section>
+
+@* ---------- Consultorios y contacto ---------- *@
+<section id="consultorios" class="seccion">
+    <div class="sitio-contenedor">
+        <header class="seccion-titulo">
+            <span class="etiqueta">Consultorios</span>
+            <h2>Visítanos en <span class="texto-rosa">@string.Join(" y ", Ciudades)</span></h2>
+            <p>Agenda tu cita en línea o escríbenos por WhatsApp.</p>
+        </header>
+
+        <div class="contacto-grid">
+            <div class="contacto-lista">
+                @foreach (var consultorio in Contenido.Consultorios)
+                {
+                    <article class="tarjeta-contacto">
+                        <span class="icono-circulo icono-rosa"><MudIcon Icon="@Icons.Material.Outlined.LocationOn" /></span>
+                        <div>
+                            <h3>@consultorio.Ciudad</h3>
+                            <p><strong>@consultorio.Lugar</strong></p>
+                            @if (!string.IsNullOrWhiteSpace(consultorio.Direccion))
+                            {
+                                <p>@consultorio.Direccion</p>
+                            }
+                            <a href="@EnlacesSitio.Mapa(consultorio)" target="_blank" rel="noopener" class="servicio-enlace">
+                                Cómo llegar <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Size="Size.Small" />
+                            </a>
+                        </div>
+                    </article>
+                }
+
+                <article class="tarjeta-contacto">
+                    <span class="icono-circulo icono-turquesa"><MudIcon Icon="@Icons.Material.Outlined.Schedule" /></span>
+                    <div>
+                        <h3>Horario de atención</h3>
+                        @if (horario.Count == 0)
+                        {
+                            <p>Escríbenos para conocer los horarios disponibles.</p>
+                        }
+                        else
+                        {
+                            @foreach (var linea in horario)
+                            {
+                                <p><strong>@linea.Dias:</strong> @linea.Horas</p>
+                            }
+                        }
+                    </div>
+                </article>
+            </div>
+
+            <aside class="tarjeta-whatsapp">
+                <span class="icono-circulo icono-blanco"><MudIcon Icon="@Icons.Custom.Brands.WhatsApp" /></span>
+                <h3>¿Prefieres WhatsApp?</h3>
+                <p>Escríbenos y te ayudamos a encontrar el mejor horario para tu cita.</p>
+                <p class="tarjeta-whatsapp-numero">@Formato.Telefono(EnlacesSitio.WhatsAppE164(Contenido.Contacto))</p>
+                <a href="@EnlacesSitio.WhatsApp(Contenido.Contacto)" class="boton boton-blanco" target="_blank" rel="noopener">
+                    <MudIcon Icon="@Icons.Custom.Brands.WhatsApp" Size="Size.Small" /> Chatea con nosotros
+                </a>
+                @if (!string.IsNullOrWhiteSpace(Contenido.Contacto.Instagram))
+                {
+                    <a href="@Contenido.Contacto.Instagram" class="enlace-claro" target="_blank" rel="noopener">
+                        <MudIcon Icon="@Icons.Custom.Brands.Instagram" Size="Size.Small" /> Síguenos en Instagram
+                    </a>
+                }
+            </aside>
+        </div>
+    </div>
+</section>
+
+@code {
+    private IReadOnlyList<HorarioLegible.Linea> horario = [];
+
+    private OpcionesSitioPublico Contenido => Sitio.CurrentValue;
+
+    private IEnumerable<string> Ciudades => Contenido.Consultorios.Select(c => c.Ciudad).Distinct();
+
+    /// <summary>"Ginecología, Obstetricia y Colposcopía".</summary>
+    private string EspecialidadesEnTexto => Contenido.Especialidades.Count switch
+    {
+        0 => "",
+        1 => Contenido.Especialidades[0],
+        _ => $"{string.Join(", ", Contenido.Especialidades.SkipLast(1))} y {Contenido.Especialidades[^1]}",
+    };
+
+    protected override async Task OnInitializedAsync() =>
+        horario = HorarioLegible.Agrupar(await ObtenerHorario.EjecutarAsync(CancellationToken.None));
+}

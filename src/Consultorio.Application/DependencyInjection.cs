@@ -45,6 +45,7 @@ public static class DependencyInjection
         services.AddScoped<EliminarBloqueo>();
         services.AddScoped<ConsultarDisponibilidad>();
         services.AddScoped<ConsultarDisponibilidadPublica>();
+        services.AddScoped<ObtenerHorarioPublico>();
         services.AddScoped<ObtenerAgenda>();
         services.AddScoped<AgendarCita>();
         services.AddScoped<CambiarEstadoCita>();

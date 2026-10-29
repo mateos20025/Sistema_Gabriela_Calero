@@ -14,12 +14,11 @@
     </HeadContent>
 }
 
-<MudPaper Elevation="1" Class="pa-6 pa-sm-8">
-    <MudText Typo="Typo.h4" HtmlTag="h1" Class="mb-1">Solicitar cita</MudText>
-
+<PaginaSitio Titulo="Solicitar cita" Etiqueta="Agenda en línea"
+             Descripcion="Elige un día y una hora libres y déjanos tus datos. Te llamaremos para confirmar la cita.">
     @if (registrada is not null)
     {
-        <MudAlert Severity="Severity.Success" Class="my-4" role="status">
+        <MudAlert Severity="Severity.Success" Class="mb-4" role="status">
             Recibimos tu solicitud para el <strong>@Formato.FechaHoraLarga(registrada.InicioUtc)</strong>.
         </MudAlert>
         <MudText Class="mb-2">
@@ -30,20 +29,16 @@
     }
     else if (dias is null)
     {
-        <MudAlert Severity="Severity.Info" Class="mt-4">@MensajesCitas.SolicitudesWebDeshabilitadas</MudAlert>
+        <MudAlert Severity="Severity.Info">@MensajesCitas.SolicitudesWebDeshabilitadas</MudAlert>
     }
     else if (dias.Count == 0)
     {
-        <MudAlert Severity="Severity.Info" Class="mt-4">
+        <MudAlert Severity="Severity.Info">
             Por ahora no hay horarios disponibles en línea. Comunícate con el consultorio para agendar tu cita.
         </MudAlert>
     }
     else
     {
-        <MudText Typo="Typo.body2" Class="mb-6 mud-text-secondary">
-            Elige un día y una hora libres y déjanos tus datos. Te llamaremos para confirmar la cita.
-        </MudText>
-
         <MudText Typo="Typo.h6" HtmlTag="h2" Class="mb-2">1. Elige el día</MudText>
         <nav class="dias-publicos mb-6" aria-label="Días con horarios disponibles">
             @foreach (var dia in dias)
@@ -144,7 +139,7 @@
             </EditForm>
         }
     }
-</MudPaper>
+</PaginaSitio>
 
 @code {
     private const string UrlScriptCaptcha = "https://challenges.cloudflare.com/turnstile/v0/api.js";
